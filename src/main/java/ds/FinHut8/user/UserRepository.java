@@ -140,4 +140,12 @@ public class UserRepository {
                 .params(params.getValues())
                 .update();
     }
+
+    public void dropUser(UUID id){
+        jdbc.sql("""
+                DELETE FROM usuario WHERE id = :id
+                """)
+                .param("id", id)
+                .update();
+    }
 }

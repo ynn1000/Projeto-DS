@@ -29,4 +29,8 @@ public class UserService {
     public void updateUser(UUID id, UserUpdateDTO user){
         repository.updateUser(id, user);
     }
+
+    public void deleteUser(UUID id){
+        repository.dropUser(id);
+    }
 }
