@@ -1,8 +1,10 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.dtos.UserUpdateDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -22,5 +24,9 @@ public class UserService {
 
     public void registerUser(User user){
         repository.postUser(user);
+    }
+
+    public void updateUser(UUID id, UserUpdateDTO user){
+        repository.updateUser(id, user);
     }
 }

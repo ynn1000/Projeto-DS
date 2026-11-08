@@ -1,13 +1,16 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.dtos.UserUpdateDTO;
 import ds.FinHut8.user.enums.Curso;
 import ds.FinHut8.user.enums.UserRole;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class UserRepository {
@@ -25,7 +28,7 @@ public class UserRepository {
                 .query((rs, rowNum) -> {
                             User user = new User();
 
-                            user.setId(rs.getString("id"));
+                            user.setId(rs.getObject("id", UUID.class));
                             user.setSenha(rs.getString("senha_hash"));
                             user.setAtivo(rs.getBoolean("ativo"));
                             user.setEmail(rs.getString("email"));
@@ -48,7 +51,7 @@ public class UserRepository {
                 .query((rs, rowNum) -> {
                     User user = new User();
 
-                    user.setId(rs.getString("id"));
+                    user.setId(rs.getObject("id", UUID.class));
                     user.setSenha(rs.getString("senha_hash"));
                     user.setAtivo(rs.getBoolean("ativo"));
                     user.setEmail(rs.getString("email"));
@@ -96,6 +99,45 @@ public class UserRepository {
                 .param("semestreIngresso", user.getSemestreIngresso())
                 .param("role", user.getRole().name())
                 .param("curso", user.getCurso().name())
+                .update();
+    }
+
+    public void updateUser(UUID id, UserUpdateDTO dto) {
+        StringBuilder sql = new StringBuilder("UPDATE usuario SET ");
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if(dto.nome() != null){
+            sql.append("nome = :nome, ");
+            params.addValue("nome", dto.nome());
+        }
+
+        if(dto.senha() != null){
+            sql.append("senha_hash = :senha, ");
+            params.addValue("senha", dto.senha());
+        }
+
+        if(dto.email() != null){
+            sql.append("email = :email, ");
+            params.addValue("email", dto.email());
+        }
+
+        if(dto.matricula() != null){
+            sql.append("matricula = :matricula, ");
+            params.addValue("matricula", dto.matricula());
+        }
+
+        if (dto.curso() != null) {
+            sql.append("curso = :curso, ");
+            params.addValue("curso", dto.curso().name());
+        }
+
+        sql.setLength(sql.length() - 2);
+
+        sql.append(" WHERE id = :id");
+        params.addValue("id", id);
+
+        jdbc.sql(sql.toString())
+                .params(params.getValues())
                 .update();
     }
 }

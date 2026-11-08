@@ -1,10 +1,12 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.dtos.UserUpdateDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -32,6 +34,14 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> postUser(@RequestBody User user){
         service.registerUser(user);
+
         return new ResponseEntity<>(user, HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserUpdateDTO> updateUser(@PathVariable UUID id, @RequestBody UserUpdateDTO user){
+        service.updateUser(id, user);
+
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }
