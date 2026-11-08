@@ -4,6 +4,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -36,5 +37,28 @@ public class UserRepository {
                             return user;
                         })
                 .optional();
+    }
+
+    public List<User> fetchAllUsers(){
+        return jdbc.sql("""
+                SELECT * from usuario
+                """)
+                .query((rs, rowNum) -> {
+                    User user = new User();
+
+                    user.setId(rs.getString("id"));
+                    user.setSenha(rs.getString("senha_hash"));
+                    user.setAtivo(rs.getBoolean("ativo"));
+                    user.setEmail(rs.getString("email"));
+                    user.setNome(rs.getString("nome"));
+                    user.setMatricula(rs.getString("matricula"));
+                    user.setDataCriacao(rs.getObject("criado_em", OffsetDateTime.class));
+                    user.setSemestreIngresso(rs.getString("semestre_ingresso"));
+                    user.setRole(UserRole.valueOf(rs.getString("role")));
+                    user.setCurso(Curso.valueOf(rs.getString("curso")));
+
+                    return user;
+                })
+                .list();
     }
 }

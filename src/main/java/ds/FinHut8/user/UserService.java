@@ -2,6 +2,8 @@ package ds.FinHut8.user;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class UserService {
     private final UserRepository repository;
@@ -11,6 +13,10 @@ public class UserService {
     }
 
     public User getUserByEmail(String email){
-        return repository.findByEmail(email).orElseThrow(()-> new RuntimeException("usuario não encontrado" + email));
+        return repository.findByEmail(email).orElseThrow(()-> new RuntimeException("usuário não encontrado" + email));
+    }
+
+    public List<User> getAll(){
+        return repository.fetchAllUsers();
     }
 }
