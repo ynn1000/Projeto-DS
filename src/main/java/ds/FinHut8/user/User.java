@@ -1,5 +1,7 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.enums.Curso;
+import ds.FinHut8.user.enums.UserRole;
 import jakarta.annotation.Nullable;
 import lombok.Data;
 
@@ -24,6 +26,15 @@ public class User implements UserDetails {
     private String semestreIngresso;
 
     public User(){}
+    public User(String nome, String email, String senha, String role, String curso, String matricula, String semestreIngresso){
+            this.nome = nome;
+            this.email = email;
+            this.senha = senha;
+            this.role = UserRole.valueOf(role);
+            this.curso = Curso.valueOf(curso);
+            this.matricula = matricula;
+            this.semestreIngresso = semestreIngresso;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

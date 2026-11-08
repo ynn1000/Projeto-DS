@@ -1,4 +1,4 @@
-package ds.FinHut8.user;
+package ds.FinHut8.user.enums;
 
 public enum UserRole {
     ADMIN,

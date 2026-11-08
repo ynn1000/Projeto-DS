@@ -1,5 +1,7 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.enums.Curso;
+import ds.FinHut8.user.enums.UserRole;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -60,5 +62,40 @@ public class UserRepository {
                     return user;
                 })
                 .list();
+    }
+
+    public void postUser(User user){
+        jdbc.sql("""
+                INSERT INTO usuario (
+                    senha_hash,
+                    ativo,
+                    email,
+                    nome,
+                    matricula,
+                    criado_em,
+                    semestre_ingresso,
+                    role,
+                    curso
+                ) VALUES (
+                    :senha,
+                    :ativo,
+                    :email,
+                    :nome,
+                    :matricula,
+                    NOW(),
+                    :semestreIngresso,
+                    :role,
+                    :curso
+                );
+                """)
+                .param("senha", user.getSenha())
+                .param("ativo", user.isAtivo())
+                .param("email", user.getEmail())
+                .param("nome", user.getNome())
+                .param("matricula", user.getMatricula())
+                .param("semestreIngresso", user.getSemestreIngresso())
+                .param("role", user.getRole().name())
+                .param("curso", user.getCurso().name())
+                .update();
     }
 }

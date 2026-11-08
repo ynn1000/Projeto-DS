@@ -1,10 +1,8 @@
 package ds.FinHut8.user;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,5 +27,11 @@ public class UserController {
         List<User> users = service.getAll();
 
         return ResponseEntity.ok(users);
+    }
+
+    @PostMapping
+    public ResponseEntity<User> postUser(@RequestBody User user){
+        service.registerUser(user);
+        return new ResponseEntity<>(user, HttpStatus.CREATED);
     }
 }

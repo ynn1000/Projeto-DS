@@ -19,4 +19,8 @@ public class UserService {
     public List<User> getAll(){
         return repository.fetchAllUsers();
     }
+
+    public void registerUser(User user){
+        repository.postUser(user);
+    }
 }
