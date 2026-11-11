@@ -44,6 +44,31 @@ public class UserRepository {
                 .optional();
     }
 
+    public Optional<User> findById(UUID id){
+        return jdbc.sql("""
+                SELECT * FROM usuario WHERE id = :id
+                """)
+                .param("id", id)
+                .query((rs, rowNum) -> {
+                        User user = new User();
+
+                        user.setId(rs.getObject("id", UUID.class));
+                        user.setSenha(rs.getString("senha_hash"));
+                        user.setAtivo(rs.getBoolean("ativo"));
+                        user.setEmail(rs.getString("email"));
+                        user.setNome(rs.getString("nome"));
+                        user.setMatricula(rs.getString("matricula"));
+                        user.setDataCriacao(rs.getObject("criado_em", OffsetDateTime.class));
+                        user.setSemestreIngresso(rs.getString("semestre_ingresso"));
+                        user.setRole(UserRole.valueOf(rs.getString("role")));
+                        user.setCurso(Curso.valueOf(rs.getString("curso")));
+
+                        return user;
+                    })
+                .optional();
+
+    }
+
     public List<User> fetchAllUsers(){
         return jdbc.sql("""
                 SELECT * from usuario
@@ -131,6 +156,9 @@ public class UserRepository {
             params.addValue("curso", dto.curso().name());
         }
 
+        if(params.getValues().isEmpty()){
+            return;
+        }
         sql.setLength(sql.length() - 2);
 
         sql.append(" WHERE id = :id");
@@ -141,11 +169,14 @@ public class UserRepository {
                 .update();
     }
 
-    public void dropUser(UUID id){
+    public User dropUser(UUID id){
+        User user = findById(id).orElseThrow(() -> new RuntimeException("usuário não encontrado" + id));
         jdbc.sql("""
                 DELETE FROM usuario WHERE id = :id
                 """)
                 .param("id", id)
                 .update();
+
+        return user;
     }
 }

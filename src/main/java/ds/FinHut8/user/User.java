@@ -1,5 +1,6 @@
 package ds.FinHut8.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import ds.FinHut8.user.enums.Curso;
 import ds.FinHut8.user.enums.UserRole;
 import jakarta.annotation.Nullable;
@@ -37,16 +38,19 @@ public class User implements UserDetails {
             this.semestreIngresso = semestreIngresso;
     }
 
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();
     }
 
+    @JsonIgnore
     @Override
     public @Nullable String getPassword() {
         return senha;
     }
 
+    @JsonIgnore
     @Override
     public String getUsername() {
         return nome;

@@ -1,8 +1,10 @@
 package ds.FinHut8.user;
 
+import ds.FinHut8.user.dtos.UserResponseDTO;
 import ds.FinHut8.user.dtos.UserUpdateDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,37 +20,37 @@ public class UserController {
     }
 
     @GetMapping(params = "email")
-    public ResponseEntity<User> getUserByEmail(@RequestParam String email){
-        User user = service.getUserByEmail(email);
+    public ResponseEntity<UserResponseDTO> getUserByEmail(@RequestParam String email){
+        UserResponseDTO user = service.getUserByEmail(email);
 
         return ResponseEntity.ok(user);
     }
 
     @GetMapping
-    public ResponseEntity<List<User>>  getAllUsers(){
-        List<User> users = service.getAll();
+    public ResponseEntity<List<UserResponseDTO>>  getAllUsers(){
+        List<UserResponseDTO> users = service.getAll();
 
         return ResponseEntity.ok(users);
     }
 
     @PostMapping
-    public ResponseEntity<User> postUser(@RequestBody User user){
-        service.registerUser(user);
+    public ResponseEntity<UserResponseDTO> postUser(@RequestBody User user){
+        UserResponseDTO dto = service.registerUser(user);
 
-        return new ResponseEntity<>(user, HttpStatus.CREATED);
+        return new ResponseEntity<>(dto, HttpStatus.CREATED);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<UserUpdateDTO> updateUser(@PathVariable UUID id, @RequestBody UserUpdateDTO user){
-        service.updateUser(id, user);
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable UUID id, @RequestBody UserUpdateDTO user){
+        UserResponseDTO dto = service.updateUser(id, user);
 
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity deleteUser(@PathVariable UUID id){
-        service.deleteUser(id);
+    public ResponseEntity<UserResponseDTO> deleteUser(@PathVariable UUID id){
+        UserResponseDTO dto = service.deleteUser(id);
 
-        return new ResponseEntity<>(HttpStatus.OK);
+        return ResponseEntity.ok(dto);
     }
 }
