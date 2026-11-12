@@ -7,6 +7,7 @@ import jakarta.annotation.Nullable;
 import lombok.Data;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.OffsetDateTime;
@@ -38,10 +39,12 @@ public class User implements UserDetails {
             this.semestreIngresso = semestreIngresso;
     }
 
-    @JsonIgnore
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        if(this.role == UserRole.ADMIN){
+            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));
+        } else return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @JsonIgnore
@@ -53,6 +56,6 @@ public class User implements UserDetails {
     @JsonIgnore
     @Override
     public String getUsername() {
-        return nome;
+        return email;
     }
 }

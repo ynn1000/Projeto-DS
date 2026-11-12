@@ -4,7 +4,6 @@ import ds.FinHut8.user.dtos.UserResponseDTO;
 import ds.FinHut8.user.dtos.UserUpdateDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,13 +30,6 @@ public class UserController {
         List<UserResponseDTO> users = service.getAll();
 
         return ResponseEntity.ok(users);
-    }
-
-    @PostMapping
-    public ResponseEntity<UserResponseDTO> postUser(@RequestBody User user){
-        UserResponseDTO dto = service.registerUser(user);
-
-        return new ResponseEntity<>(dto, HttpStatus.CREATED);
     }
 
     @PatchMapping("/{id}")

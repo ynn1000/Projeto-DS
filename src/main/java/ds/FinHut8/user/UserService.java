@@ -30,6 +30,11 @@ public class UserService {
         return dto;
     }
 
+    public User getUserEntityByEmail(String email){
+        return repository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado: " + email));
+    }
+
     public List<UserResponseDTO> getAll(){
         return repository.fetchAllUsers()
                 .stream()
