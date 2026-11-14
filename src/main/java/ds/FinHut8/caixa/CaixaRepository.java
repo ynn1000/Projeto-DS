@@ -69,8 +69,8 @@ public class CaixaRepository {
         return new Caixa(
                 rs.getInt("id"),
                 rs.getBigDecimal("saldo_inicial"),
-                rs.getBigDecimal("saldo_atual"),
-                rs.getBigDecimal("limite_despesas")
+                rs.getBigDecimal("limite_despesas"),
+                rs.getBigDecimal("saldo_atual")
         );
     }
 }
