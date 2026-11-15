@@ -1,4 +1,4 @@
-package ds.FinHut8.orcamento;
+package ds.FinHut8.orcamento.dtos;
 
 import java.math.BigDecimal;
 

@@ -32,4 +32,18 @@ build/
 ### VS Code ###
 .vscode/
 
-src/main/resources/application.properties
+# Node
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+
+# Java / Maven
+target/
+**/target/
+
+# Local configuration
+api/src/main/resources/application.properties
+.env
+.env.*
+!.env.example
