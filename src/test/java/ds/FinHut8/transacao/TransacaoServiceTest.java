@@ -34,52 +34,102 @@ class TransacaoServiceTest {
     }
 
     @Test
-    void registraDespesaComCategoriaAtiva() {
-        when(repository.categoriaAtivaDoCaixa(1, 3)).thenReturn(true);
-        when(repository.inserir(1, "Compra de material", TipoTransacao.DESPESA, VALOR, DATA, 3))
-                .thenReturn(new Transacao(5, "Compra de material", TipoTransacao.DESPESA, VALOR, DATA, 3, CRIADO_EM));
+    void registraDespesaComCategoriaOrcamentariaAtiva() {
+        when(repository.categoriaOrcamentariaAtivaDoCaixa(1, 3)).thenReturn(true);
+        when(repository.inserir(1, "Compra de material", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, null))
+                .thenReturn(new Transacao(5, "Compra de material", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, null, CRIADO_EM));
 
         var resultado = service.registrar(new TransacaoCreateDTO(
-                "  Compra de material  ", TipoTransacao.DESPESA, VALOR, DATA, 3));
+                "  Compra de material  ", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, null));
 
         assertEquals(5, resultado.id());
         assertEquals("Compra de material", resultado.descricao());
         assertEquals(TipoTransacao.DESPESA, resultado.tipo());
-        assertEquals(3, resultado.categoriaId());
+        assertEquals(CategoriaTransacao.ALIMENTOS, resultado.categoriaTransacao());
+        assertEquals(3, resultado.categoriaOrcamentariaId());
         assertEquals(VALOR, resultado.valor());
     }
 
     @Test
-    void registraReceitaSemCategoria() {
-        when(repository.inserir(1, "Recebimento", TipoTransacao.RECEITA, VALOR, DATA, null))
-                .thenReturn(new Transacao(6, "Recebimento", TipoTransacao.RECEITA, VALOR, DATA, null, CRIADO_EM));
+    void registraReceitaSemCategoriaOrcamentaria() {
+        when(repository.inserir(1, "Recebimento", TipoTransacao.RECEITA, CategoriaTransacao.VENDA, VALOR, DATA, null, null))
+                .thenReturn(new Transacao(6, "Recebimento", TipoTransacao.RECEITA, CategoriaTransacao.VENDA, VALOR, DATA, null, null, CRIADO_EM));
 
         var resultado = service.registrar(new TransacaoCreateDTO(
-                "Recebimento", TipoTransacao.RECEITA, VALOR, DATA, null));
+                "Recebimento", TipoTransacao.RECEITA, CategoriaTransacao.VENDA, VALOR, DATA, null, null));
 
         assertEquals(TipoTransacao.RECEITA, resultado.tipo());
-        assertNull(resultado.categoriaId());
-        verify(repository).inserir(1, "Recebimento", TipoTransacao.RECEITA, VALOR, DATA, null);
+        assertEquals(CategoriaTransacao.VENDA, resultado.categoriaTransacao());
+        assertNull(resultado.categoriaOrcamentariaId());
+        verify(repository).inserir(1, "Recebimento", TipoTransacao.RECEITA, CategoriaTransacao.VENDA, VALOR, DATA, null, null);
         verifyNoMoreInteractions(repository);
     }
 
     @Test
-    void rejeitaDespesaSemCategoria() {
-        rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, VALOR, DATA, null));
+    void rejeitaDespesaSemCategoriaOrcamentaria() {
+        rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, null, null));
         verifyNoInteractions(repository);
     }
 
     @Test
+    void rejeitaReceitaComCategoriaOrcamentaria() {
+        rejeita(new TransacaoCreateDTO("Venda", TipoTransacao.RECEITA,
+                CategoriaTransacao.VENDA, VALOR, DATA, 3, null));
+        verifyNoInteractions(repository, caixaRepository);
+    }
+
+    @Test
+    void rejeitaLancamentoSemCategoriaDaTransacao() {
+        rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, null, VALOR, DATA, 3, null));
+        verifyNoInteractions(repository, caixaRepository);
+    }
+
+    @Test
     void rejeitaCategoriaInvalidaSemInserir() {
-        rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, VALOR, DATA, 3));
-        verify(repository).categoriaAtivaDoCaixa(1, 3);
+        rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, null));
+        verify(repository).categoriaOrcamentariaAtivaDoCaixa(1, 3);
         verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void registraDespesaVinculadaASubverba() {
+        when(repository.categoriaOrcamentariaAtivaDoCaixa(1, 3)).thenReturn(true);
+        when(repository.subverbaValida(1, 3, 7, DATA)).thenReturn(true);
+        when(repository.inserir(1, "Lanches", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS,
+                VALOR, DATA, 3, 7)).thenReturn(new Transacao(5, "Lanches", TipoTransacao.DESPESA,
+                CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, 7, CRIADO_EM));
+
+        var resultado = service.registrar(new TransacaoCreateDTO("Lanches", TipoTransacao.DESPESA,
+                CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, 7));
+
+        assertEquals(3, resultado.categoriaOrcamentariaId());
+        assertEquals(7, resultado.subverbaId());
+    }
+
+    @Test
+    void rejeitaSubverbaQueNaoCorrespondeAoLancamento() {
+        when(repository.categoriaOrcamentariaAtivaDoCaixa(1, 3)).thenReturn(true);
+
+        rejeita(new TransacaoCreateDTO("Lanches", TipoTransacao.DESPESA,
+                CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, 7));
+
+        verify(repository).categoriaOrcamentariaAtivaDoCaixa(1, 3);
+        verify(repository).subverbaValida(1, 3, 7, DATA);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void rejeitaReceitaComSubverba() {
+        rejeita(new TransacaoCreateDTO("Venda", TipoTransacao.RECEITA,
+                CategoriaTransacao.VENDA, VALOR, DATA, null, 7));
+
+        verifyNoInteractions(repository, caixaRepository);
     }
 
     @Test
     void rejeitaValoresInvalidos() {
         for (String valor : List.of("0", "-1", "50.001", "10000000.00")) {
-            rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, new BigDecimal(valor), DATA, 3));
+            rejeita(new TransacaoCreateDTO("Compra", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, new BigDecimal(valor), DATA, 3, null));
         }
         verifyNoInteractions(repository);
     }
@@ -87,12 +137,14 @@ class TransacaoServiceTest {
     @Test
     void listaSomenteTransacoesDoCaixa() {
         when(repository.listar(1)).thenReturn(List.of(
-                new Transacao(5, "Compra", TipoTransacao.DESPESA, VALOR, DATA, 3, CRIADO_EM)));
+                new Transacao(5, "Compra", TipoTransacao.DESPESA, CategoriaTransacao.ALIMENTOS, VALOR, DATA, 3, null, CRIADO_EM)));
 
         var resultado = service.listar();
 
         assertEquals(1, resultado.size());
         assertEquals(5, resultado.getFirst().id());
+        assertEquals(CategoriaTransacao.ALIMENTOS, resultado.getFirst().categoriaTransacao());
+        assertEquals(3, resultado.getFirst().categoriaOrcamentariaId());
         verify(repository).listar(1);
     }
 

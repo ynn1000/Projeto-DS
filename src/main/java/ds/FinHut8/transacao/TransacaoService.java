@@ -43,6 +43,10 @@ public class TransacaoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe o tipo e a data do movimento.");
         }
 
+        if (dto.categoriaTransacao() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe a categoria da transação.");
+        }
+
         BigDecimal valor = dto.valor();
         if (valor == null || valor.signum() <= 0 || valor.compareTo(VALOR_MAXIMO) > 0
                 || valor.stripTrailingZeros().scale() > 2) {
@@ -50,22 +54,37 @@ public class TransacaoService {
                     "Informe um valor maior que zero, até 9999999,99 e com no máximo duas casas decimais.");
         }
 
-        Integer categoriaId = dto.categoriaId();
-        if (dto.tipo() == TipoTransacao.DESPESA && categoriaId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe a categoria da despesa.");
+        Integer categoriaOrcamentariaId = dto.categoriaOrcamentariaId();
+        Integer subverbaId = dto.subverbaId();
+        if (dto.tipo() == TipoTransacao.DESPESA && categoriaOrcamentariaId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe a categoria orçamentária da despesa.");
         }
-        if (categoriaId != null && categoriaId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe um ID de categoria positivo.");
+        if (dto.tipo() == TipoTransacao.RECEITA && (categoriaOrcamentariaId != null || subverbaId != null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Receitas não usam verba orçamentária nem subverba.");
+        }
+        if (categoriaOrcamentariaId != null && categoriaOrcamentariaId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe um ID de categoria orçamentária positivo.");
+        }
+
+        if (subverbaId != null && subverbaId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe um ID de subverba positivo.");
         }
 
         Integer caixaId = buscarCaixaId();
-        if (categoriaId != null && !repository.categoriaAtivaDoCaixa(caixaId, categoriaId)) {
+        if (categoriaOrcamentariaId != null && !repository.categoriaOrcamentariaAtivaDoCaixa(caixaId, categoriaOrcamentariaId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "A categoria deve estar ativa e pertencer à empresa do caixa.");
+                    "A categoria orçamentária deve estar ativa e pertencer à empresa do caixa.");
+        }
+
+        if (subverbaId != null && !repository.subverbaValida(
+                caixaId, categoriaOrcamentariaId, subverbaId, dto.dataMovimento())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A subverba precisa pertencer à verba e ao período do lançamento.");
         }
 
         Transacao transacao = repository.inserir(
-                caixaId, descricao, dto.tipo(), valor, dto.dataMovimento(), categoriaId);
+                caixaId, descricao, dto.tipo(), dto.categoriaTransacao(), valor,
+                dto.dataMovimento(), categoriaOrcamentariaId, subverbaId);
         return new TransacaoResponseDTO(transacao);
     }
 

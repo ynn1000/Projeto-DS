@@ -50,7 +50,7 @@ public class TransacaoController {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ProblemDetail> responderJsonInvalido() {
         ProblemDetail erro = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-                "Confira o tipo (RECEITA ou DESPESA), a data (AAAA-MM-DD) e os demais campos do JSON.");
+                "Confira o tipo (RECEITA ou DESPESA), a categoria da transação e a data (AAAA-MM-DD).");
         return ResponseEntity.badRequest().body(erro);
     }
 }

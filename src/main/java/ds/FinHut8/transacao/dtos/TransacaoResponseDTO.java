@@ -1,5 +1,6 @@
 package ds.FinHut8.transacao.dtos;
 
+import ds.FinHut8.transacao.CategoriaTransacao;
 import ds.FinHut8.transacao.TipoTransacao;
 import ds.FinHut8.transacao.Transacao;
 
@@ -11,9 +12,11 @@ public record TransacaoResponseDTO(
         Integer id,
         String descricao,
         TipoTransacao tipo,
+        CategoriaTransacao categoriaTransacao,
         BigDecimal valor,
         LocalDate dataMovimento,
-        Integer categoriaId,
+        Integer categoriaOrcamentariaId,
+        Integer subverbaId,
         OffsetDateTime criadoEm
 ) {
     public TransacaoResponseDTO(Transacao transacao) {
@@ -21,9 +24,11 @@ public record TransacaoResponseDTO(
                 transacao.id(),
                 transacao.descricao(),
                 transacao.tipo(),
+                transacao.categoriaTransacao(),
                 transacao.valor(),
                 transacao.dataMovimento(),
-                transacao.categoriaId(),
+                transacao.categoriaOrcamentariaId(),
+                transacao.subverbaId(),
                 transacao.criadoEm()
         );
     }

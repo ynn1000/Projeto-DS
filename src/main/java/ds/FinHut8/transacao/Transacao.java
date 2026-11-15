@@ -8,8 +8,10 @@ public record Transacao(
         Integer id,
         String descricao,
         TipoTransacao tipo,
+        CategoriaTransacao categoriaTransacao,
         BigDecimal valor,
         LocalDate dataMovimento,
-        Integer categoriaId,
+        Integer categoriaOrcamentariaId,
+        Integer subverbaId,
         OffsetDateTime criadoEm
 ) {}
