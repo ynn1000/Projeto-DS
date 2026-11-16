@@ -1,12 +1,13 @@
 import { createBrowserRouter, RouterProvider } from 'react-router'
+import { Login } from './pages/login'
 
 const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <h1>FinHut8</h1>,
-  }
+    {
+        path: '/auth/login',
+        element: <Login />
+    }
 ])
 
 export function App() {
-  return <RouterProvider router={router}/>
-} 
+    return <RouterProvider router={router} />
+}
