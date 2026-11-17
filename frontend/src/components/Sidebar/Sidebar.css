@@ -1,0 +1,96 @@
+.sidebar {
+    display: flex;
+    flex: 0 0 275px;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 24px 15px 26px;
+    background: #0c0c0d;
+    color: #f7f7f7;
+}
+
+.sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 15px 48px;
+}
+
+.sidebar-header .hut8-logo {
+    display: block;
+    width: 43px;
+    height: 56px;
+    margin: 0 0 8px 4px;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    color: #f2f2f2;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar nav a,
+.sidebar-footer a {
+    display: flex;
+    align-items: center;
+    min-height: 53px;
+    padding: 0 24px;
+    border-radius: 10px;
+    color: #eeeeee;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.sidebar nav a:hover,
+.sidebar-footer a:hover { background: #1c1c1c; }
+
+.sidebar nav a.active {
+    position: relative;
+    background: #262626;
+    color: #fff;
+    font-weight: 650;
+}
+
+.sidebar nav a.active::before {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 0;
+    width: 4px;
+    border-radius: 4px;
+    background: var(--hut8-accent);
+    content: '';
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 22px;
+    border-top: 1px solid #777;
+}
+
+.sidebar-footer a { min-height: auto; padding: 12px 5px 0; }
+
+@media (max-width: 760px) {
+    .sidebar {
+        flex: 0 0 auto;
+        min-height: auto;
+        padding: 14px;
+    }
+    .sidebar-header { flex-direction: row; align-items: center; gap: 12px; padding: 0 8px 14px; }
+    .sidebar-header .hut8-logo { width: 30px; height: 40px; margin: 0; }
+    .sidebar nav { flex-direction: row; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+    .sidebar nav a { min-height: 40px; white-space: nowrap; padding: 0 12px; font-size: 13px; }
+    .sidebar nav a.active::before { top: auto; right: 8px; bottom: 0; left: 8px; width: auto; height: 3px; }
+    .sidebar-footer { display: none; }
+}

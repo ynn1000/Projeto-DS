@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import "./Sidebar.css";
 
 export function Sidebar(){
     return(
@@ -11,17 +12,18 @@ export function Sidebar(){
                 </div>
                 
                 <nav>
-                    <NavLink to="/app/geral">visão geral</NavLink>
-                    <NavLink to="/app/transacoes">transações</NavLink>
-                    <NavLink to="/app/documentos">documentos</NavLink>
-                    <NavLink to="/app/contratos">contratos</NavLink>
-                    <NavLink to="/app/orcamentos">orcamentos</NavLink>
-                    <NavLink to="/app/metas">metas</NavLink>
-                    <NavLink to="/app/equipe">equipe</NavLink>
+                    <NavLink to="/app/geral">Visão geral</NavLink>
+                    <NavLink to="/app/transacoes">Transações</NavLink>
+                    <NavLink to="/app/documentos">Documentos</NavLink>
+                    <NavLink to="/app/contratos">Contratos</NavLink>
+                    <NavLink to="/app/orcamentos">Orçamentos</NavLink>
+                    <NavLink to="/app/distribuicao">Distribuição</NavLink>
+                    <NavLink to="/app/metas">Metas</NavLink>
+                    <NavLink to="/app/equipe">Equipe</NavLink>
                 </nav>
 
                 <div className="sidebar-footer">
-                    <NavLink to="/app/perfil">perfil</NavLink>
+                    <NavLink to="/app/perfil">Perfil</NavLink>
                 </div>
             </aside>
     );
