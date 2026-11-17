@@ -20,7 +20,7 @@ export function Login() {
             localStorage.setItem('session', response.data.token);
             setEmail('');
             setSenha('');
-            navigate('/app/contratos', { replace: true });
+            navigate('/app/geral', { replace: true });
         } catch (error) {
             setErro(getApiError(error, 'Não foi possível realizar o login.'));
         } finally {
