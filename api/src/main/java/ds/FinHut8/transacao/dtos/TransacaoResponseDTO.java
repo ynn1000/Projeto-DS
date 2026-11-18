@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 public record TransacaoResponseDTO(Integer id, String descricao, TipoTransacao tipo,
         CategoriaTransacao categoriaTransacao, BigDecimal valor, LocalDate dataMovimento,
         Integer categoriaOrcamentariaId, Integer subverbaId, Integer projetoId, Integer prestacaoId,
-        Integer registradoPorId, OffsetDateTime criadoEm) {
+        String registradoPorId, OffsetDateTime criadoEm) {
     public TransacaoResponseDTO(Transacao t) {
         this(t.id(), t.descricao(), t.tipo(), t.categoriaTransacao(), t.valor(), t.dataMovimento(),
                 t.categoriaOrcamentariaId(), t.subverbaId(), t.projetoId(), t.prestacaoId(),

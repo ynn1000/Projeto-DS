@@ -54,17 +54,11 @@ public class TransacaoService {
     @Transactional
     public TransacaoResponseDTO registrar(TransacaoCreateDTO dto, User usuario) {
         Dados dados = validar(dto);
-        if (usuario == null || usuario.getId() == null) {
+        if (usuario == null || usuario.getMatricula() == null || usuario.getMatricula().isBlank()) {
             throw erro(HttpStatus.UNAUTHORIZED, "Não foi possível identificar o usuário autenticado.");
         }
         Integer caixaId = caixaId();
-        Integer funcionarioId;
-        try {
-            funcionarioId = repository.funcionarioIdPorUsuario(usuario.getId());
-        } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "O usuário autenticado não possui um funcionário ativo vinculado.", e);
-        }
+        String matriculaUsuario = usuario.getMatricula();
 
         Integer projetoId = dados.projetoId();
         Integer prestacaoId = dados.prestacaoId();
@@ -96,7 +90,7 @@ public class TransacaoService {
             throw erro(HttpStatus.BAD_REQUEST, "A subverba precisa pertencer à verba e a um período ativo que contenha a data do lançamento.");
         }
         try {
-            Transacao criada = repository.inserir(caixaId, funcionarioId, dados.descricao(), dados.tipo(),
+            Transacao criada = repository.inserir(caixaId, matriculaUsuario, dados.descricao(), dados.tipo(),
                     dados.categoriaTransacao(), dados.valor(), dados.data(), dados.categoriaId(),
                     dados.subverbaId(), projetoId, prestacaoId);
             if (prestacaoId != null && repository.marcarPrestacaoPaga(prestacaoId) != 1) {

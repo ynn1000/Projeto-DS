@@ -9,7 +9,6 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Repository
 public class TransacaoRepository {
@@ -120,12 +119,6 @@ public class TransacaoRepository {
                 .param("subverbaId", subverbaId).param("data", data).query(Boolean.class).single();
     }
 
-    public Integer funcionarioIdPorUsuario(UUID usuarioId) {
-        return jdbc.sql("SELECT id FROM public.funcionario WHERE usuario_id = :usuarioId AND ativo = TRUE")
-                .param("usuarioId", usuarioId).query(Integer.class).optional()
-                .orElseThrow(() -> new IllegalStateException("O usuário autenticado não possui funcionário ativo vinculado."));
-    }
-
     public boolean projetoPertenceAoCaixa(Integer caixaId, Integer projetoId) {
         return jdbc.sql("""
                 SELECT EXISTS (SELECT 1 FROM public.projeto p JOIN public.caixa c
@@ -144,18 +137,18 @@ public class TransacaoRepository {
                 .optional().orElse(null);
     }
 
-    public Transacao inserir(Integer caixaId, Integer funcionarioId, String descricao, TipoTransacao tipo,
+    public Transacao inserir(Integer caixaId, String matriculaUsuario, String descricao, TipoTransacao tipo,
             CategoriaTransacao categoriaTransacao, BigDecimal valor, LocalDate data, Integer categoriaId,
             Integer subverbaId, Integer projetoId, Integer prestacaoId) {
         return jdbc.sql("""
                 INSERT INTO public.transacao (caixa_id, registrado_por_id, projeto_id, prestacao_id,
                     categoria_id, subverba_id, descricao, tipo, categoria_transacao, valor, data_movimento)
-                VALUES (:caixaId, :funcionarioId, :projetoId, :prestacaoId, :categoriaId, :subverbaId,
+                VALUES (:caixaId, :matriculaUsuario, :projetoId, :prestacaoId, :categoriaId, :subverbaId,
                     :descricao, :tipo, :categoriaTransacao, :valor, :data)
                 RETURNING id, descricao, tipo, categoria_transacao, valor, data_movimento,
                     categoria_id, subverba_id, projeto_id, prestacao_id, registrado_por_id, criado_em
                 """)
-                .param("caixaId", caixaId).param("funcionarioId", funcionarioId)
+                .param("caixaId", caixaId).param("matriculaUsuario", matriculaUsuario)
                 .param("projetoId", projetoId, Types.INTEGER).param("prestacaoId", prestacaoId, Types.INTEGER)
                 .param("categoriaId", categoriaId, Types.INTEGER).param("subverbaId", subverbaId, Types.INTEGER)
                 .param("descricao", descricao).param("tipo", tipo.name())
@@ -245,7 +238,7 @@ public class TransacaoRepository {
                 CategoriaTransacao.valueOf(rs.getString("categoria_transacao")), rs.getBigDecimal("valor"),
                 rs.getObject("data_movimento", LocalDate.class), rs.getObject("categoria_id", Integer.class),
                 rs.getObject("subverba_id", Integer.class), rs.getObject("projeto_id", Integer.class),
-                rs.getObject("prestacao_id", Integer.class), rs.getObject("registrado_por_id", Integer.class),
+                rs.getObject("prestacao_id", Integer.class), rs.getString("registrado_por_id"),
                 rs.getObject("criado_em", OffsetDateTime.class));
     }
     private Comprovante mapComprovante(ResultSet rs, int row) throws SQLException {

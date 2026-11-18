@@ -4,6 +4,10 @@ import { Dashboard } from './pages/dashboard';
 import { Equipe } from './pages/equipe'
 import { AppLayout } from './layouts/AppLayout/AppLayout';
 import { ContratoDetalhes, Contratos } from './pages/contratos';
+import { Orcamentos } from './pages/solicitar_orcamento/Orcamentos';
+import { OrcamentoDetalhes } from './pages/solicitar_orcamento/OrcamentoDetalhes';
+import { OrcamentosLayout } from './pages/solicitar_orcamento/OrcamentosLayout';
+import { SolicitarOrcamento } from './pages/solicitar_orcamento';
 
 function EmDesenvolvimento({ titulo }: { titulo: string }) {
     return (
@@ -27,7 +31,15 @@ const router = createBrowserRouter([
             { path: 'documentos', element: <EmDesenvolvimento titulo="Documentos" /> },
             { path: 'contratos', element: <Contratos /> },
             { path: 'contratos/:id', element: <ContratoDetalhes /> },
-            { path: 'orcamentos', element: <EmDesenvolvimento titulo="Orçamentos" /> },
+            {
+                path: 'orcamentos',
+                element: <OrcamentosLayout />,
+                children: [
+                    { index: true, element: <Orcamentos /> },
+                    { path: 'solicitar', element: <SolicitarOrcamento /> },
+                    { path: ':id', element: <OrcamentoDetalhes /> },
+                ],
+            },
             { path: 'distribuicao', element: <EmDesenvolvimento titulo="Distribuição" /> },
             { path: 'metas', element:  <EmDesenvolvimento titulo="Metas" /> },
             { path: 'equipe', element: <Equipe /> },

@@ -1,10 +1,13 @@
 package ds.FinHut8.solicitacao_orcamento;
 
+import ds.FinHut8.orcamento.CategoriaOrcamentariaDTO;
+import ds.FinHut8.orcamento.CategoriaOrcamentariaService;
 import ds.FinHut8.solicitacao_orcamento.dtos.OrcamentoDecisaoDTO;
 import ds.FinHut8.solicitacao_orcamento.dtos.OrcamentoRequestDTO;
 import ds.FinHut8.solicitacao_orcamento.dtos.OrcamentoResponseDTO;
 import ds.FinHut8.solicitacao_orcamento.enums.OrcamentoStatus;
 import ds.FinHut8.user.User;
+import ds.FinHut8.user.enums.UserRole;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,9 +20,21 @@ import java.util.List;
 public class OrcamentoController {
 
     private final OrcamentoService service;
+    private final CategoriaOrcamentariaService categorias;
 
-    public OrcamentoController(OrcamentoService service) {
+    public OrcamentoController(OrcamentoService service, CategoriaOrcamentariaService categorias) {
         this.service = service;
+        this.categorias = categorias;
+    }
+
+    @GetMapping("/perfil")
+    public UserRole consultarPerfil(@AuthenticationPrincipal User usuario) {
+        return usuario.getRole();
+    }
+
+    @GetMapping("/categorias")
+    public List<CategoriaOrcamentariaDTO> listarCategorias() {
+        return categorias.listarAtivas();
     }
 
     // Usuário: solicitar orçamento
