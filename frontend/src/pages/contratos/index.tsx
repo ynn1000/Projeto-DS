@@ -52,7 +52,6 @@ export function Contratos() {
         }
     }, []);
 
-    // A busca inicial sincroniza o estado da tela com a API.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { void carregar('', ''); }, [carregar]);
 
@@ -106,12 +105,12 @@ export function Contratos() {
 
     return (
         <div className="contracts-page">
-            <header className="contracts-header">
+            <header className="contracts-header app-page-header">
                 <div>
                     <h1>Contratos</h1>
-                    <p className="contracts-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos</p>
+                    <p className="page-header-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos</p>
                 </div>
-                <button className="contracts-new-button" type="button" onClick={abrirNovo}>+ Novo contrato</button>
+                <button className="contracts-new-button page-header-action" type="button" onClick={abrirNovo}>+ Novo contrato</button>
             </header>
 
             <section className="contracts-content" aria-label="Consulta de contratos">
@@ -254,6 +253,7 @@ export function ContratoDetalhes() {
         await carregarPrestacoes();
     }, [contratoId, carregarPrestacoes]);
     // A consulta por ID sincroniza o estado da tela com os recursos remotos.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { void carregar(); }, [carregar]);
 
     const resumo = useMemo(() => {
@@ -350,9 +350,13 @@ export function ContratoDetalhes() {
     }
 
     return <div className="contracts-page">
-        <header className="contracts-header">
-            <div><h1>Detalhes do contrato</h1><p className="contracts-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos&nbsp; / &nbsp;Detalhes</p></div>
-            {contrato && podeEditar(contrato) && <button className="contracts-new-button" type="button" onClick={() => setModalEdicao(true)}>Editar contrato</button>}
+        <header className="contracts-header app-page-header">
+            <div>
+                <h1>Detalhes do contrato</h1>
+                <p className="page-header-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos&nbsp; / &nbsp;Detalhes</p>
+            </div>
+            {contrato && podeEditar(contrato) && <button className="contracts-new-button page-header-action" type="button" onClick={() => setModalEdicao(true)}>Editar contrato</button>}
+            <p className="contracts-disclaimer page-header-disclaimer">GESTÃO FINANCEIRA <span>•</span> DADOS REAIS</p>
         </header>
         <section className="contracts-content contract-details-content">
             <Link className="contract-back-link" to="/app/contratos">← Voltar para contratos</Link>

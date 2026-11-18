@@ -156,6 +156,11 @@ public class UserRepository {
             params.addValue("curso", dto.curso().name());
         }
 
+        if (dto.ativo() != null) {
+            sql.append("ativo = :ativo, ");
+            params.addValue("ativo", dto.ativo());
+        }
+
         if(params.getValues().isEmpty()){
             return;
         }

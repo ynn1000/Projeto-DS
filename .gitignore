@@ -47,3 +47,5 @@ api/src/main/resources/application.properties
 .env
 .env.*
 !.env.example
+
+api/src/main/java/geradorSenha.java

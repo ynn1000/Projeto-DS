@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { Login } from './pages/login';
 import { Dashboard } from './pages/dashboard';
+import { Equipe } from './pages/equipe'
 import { AppLayout } from './layouts/AppLayout/AppLayout';
 import { ContratoDetalhes, Contratos } from './pages/contratos';
 
@@ -28,8 +29,8 @@ const router = createBrowserRouter([
             { path: 'contratos/:id', element: <ContratoDetalhes /> },
             { path: 'orcamentos', element: <EmDesenvolvimento titulo="Orçamentos" /> },
             { path: 'distribuicao', element: <EmDesenvolvimento titulo="Distribuição" /> },
-            { path: 'metas', element: <EmDesenvolvimento titulo="Metas" /> },
-            { path: 'equipe', element: <EmDesenvolvimento titulo="Equipe" /> },
+            { path: 'metas', element:  <EmDesenvolvimento titulo="Metas" /> },
+            { path: 'equipe', element: <Equipe /> },
             { path: 'perfil', element: <EmDesenvolvimento titulo="Perfil" /> },
         ],
     },

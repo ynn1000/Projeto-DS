@@ -1,0 +1,263 @@
+.team-page { min-height: 100vh; background: #f3f3f3; }
+
+.team-new-button {
+    background: #c6ff3d;
+    color: #1a2b00;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.team-new-button:disabled { opacity: 0.6; cursor: default; }
+.team-content {
+    margin: 40px 48px;
+    background: #fff;
+    border: 1px solid #e7e7e4;
+    border-radius: 8px;
+    padding: 28px;
+}
+.team-content-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 18px; }
+
+.team-filter-tabs {
+    display: inline-flex;
+    gap: 8px;
+    margin-bottom: 22px;
+}
+.team-filter-tabs button {
+    border: 1px solid #e1e0da;
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: #15151a;
+}
+.team-filter-tabs button.active {
+    background: #c6ff3d;
+    border-color: #c6ff3d;
+    color: #1a2b00;
+    font-weight: 600;
+}
+
+.team-list { display: flex; flex-direction: column; gap: 10px; }
+
+.member-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 1fr auto;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #ededea;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f1f1ee;
+    color: #4a4a50;
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.member-identity { display: flex; flex-direction: column; }
+.member-identity strong { font-size: 0.92rem; }
+.member-cargo { font-size: 0.8rem; color: #8a8a90; }
+.member-squad { font-size: 0.85rem; color: #55555c; }
+.member-actions { display: flex; align-items: center; justify-self: end; gap: 8px; }
+.member-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 999px;
+}
+.badge-admin { border: 1px solid #15151a; color: #15151a; background: transparent; }
+.badge-user { background: #f1f1ee; color: #55555c; }
+.member-edit-button {
+    border: 1px solid #e1e0da;
+    border-radius: 6px;
+    background: #fff;
+    padding: 6px 12px;
+    color: #15151a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.member-edit-button:hover { background: #f1f1ee; }
+
+.team-feedback { font-size: 0.88rem; color: #55555c; }
+.team-feedback-error { color: #b42318; }
+.team-empty { color: #8a8a90; font-size: 0.9rem; padding: 24px 0; text-align: center; }
+
+/* ---- Modal: Adicionar funcionário ---- */
+
+.member-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 18, 20, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 50;
+}
+.member-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    padding: 28px 32px 24px;
+}
+.member-modal header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.member-modal h2 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.member-modal-lede { font-size: 0.85rem; color: #8a8a90; margin: 6px 0 0; }
+.member-modal header button {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #8a8a90;
+}
+
+.member-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+.member-form-row label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #15151a;
+}
+.member-form-row input,
+.member-form-row select {
+    font: inherit;
+    font-weight: 400;
+    font-size: 0.9rem;
+    padding: 9px 12px;
+    border: 1px solid #e1e0da;
+    border-radius: 6px;
+    background: #fcfcfb;
+}
+
+.member-form-divider {
+    border-top: 1px solid #ededea;
+    padding-top: 18px;
+    margin: 6px 0 16px;
+}
+.member-form-divider h3 { font-size: 0.95rem; font-weight: 700; margin: 0; }
+
+.member-form-tipo { margin-bottom: 18px; }
+.member-form-tipo-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.member-form-tipo-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.member-tipo-choice { display: flex; gap: 8px; }
+.member-tipo-choice button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e1e0da;
+    background: #fff;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: #15151a;
+}
+.member-tipo-choice button.active {
+    background: #c6ff3d;
+    border-color: #c6ff3d;
+    color: #1a2b00;
+    font-weight: 600;
+}
+.member-tipo-radio {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid #8a8a90;
+    display: inline-block;
+}
+.member-form-hint { font-size: 0.8rem; color: #8a8a90; }
+.member-edit-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    font-size: 0.88rem;
+}
+.member-edit-meta label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.member-edit-meta input { accent-color: #c6ff3d; }
+
+.member-modal footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #ededea;
+    padding-top: 18px;
+    margin-top: 6px;
+}
+.member-form-footer-start { display: flex; align-items: center; gap: 12px; }
+.member-form-required { font-size: 0.78rem; color: #8a8a90; }
+.member-form-actions { display: flex; gap: 10px; }
+.member-delete-button {
+    background: #fff;
+    border: 1px solid #b42318;
+    border-radius: 6px;
+    color: #b42318;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.member-delete-button:hover { background: #fef3f2; }
+.member-delete-button:disabled { opacity: 0.6; cursor: default; }
+.member-cancel-button {
+    background: none;
+    border: 1px solid #e1e0da;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .team-content { margin: 28px 24px; }
+}
+
+@media (max-width: 600px) {
+    .team-content { margin: 24px; padding: 20px; }
+    .member-row { grid-template-columns: 40px 1fr auto; }
+    .member-squad { grid-column: 2; }
+    .member-modal footer { flex-direction: column; align-items: stretch; gap: 14px; }
+    .member-form-footer-start { justify-content: space-between; }
+    .member-form-actions { justify-content: flex-end; }
+}

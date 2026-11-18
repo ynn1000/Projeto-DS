@@ -89,14 +89,14 @@ export function Dashboard() {
 
     return (
         <div className="dashboard-page">
-            <header className="dashboard-header">
+            <header className="dashboard-header app-page-header">
                 <div>
                     <h1>Dashboard financeiro</h1>
-                    <p className="dashboard-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Visão geral</p>
+                    <p className="page-header-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Visão geral</p>
                 </div>
-                <button type="button" className="dashboard-primary dashboard-header-action" disabled={!logado}
+                <button type="button" className="dashboard-primary page-header-action" disabled={!logado}
                     onClick={() => { setSalvo(false); setTipoModal('DESPESA'); }}>+ Novo lançamento</button>
-                <p className="dashboard-periodo">GESTÃO FINANCEIRA <span>•</span> {nomeMes.format(new Date())}</p>
+                <p className="dashboard-periodo page-header-disclaimer">GESTÃO FINANCEIRA <span>•</span> {nomeMes.format(new Date())}</p>
             </header>
 
             <div className="dashboard-body">

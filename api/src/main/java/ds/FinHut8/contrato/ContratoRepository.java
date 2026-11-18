@@ -132,11 +132,6 @@ public class ContratoRepository {
                 .single();
     }
 
-    /**
-     * A política definida para esta etapa permite exclusão física somente quando
-     * não há prestações. Transações e comprovantes ligados ao contrato dependem
-     * de uma prestação por meio das FKs existentes.
-     */
     public boolean possuiPrestacoes(Integer contratoId) {
         return jdbc.sql("""
                 SELECT EXISTS (
