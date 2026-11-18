@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { contratoService } from '../../services/contratoService';
 import { getApiError } from '../../services/api';
 import type { Contrato, ContratoPayload, StatusContrato } from '../../types/contrato';
@@ -21,6 +21,8 @@ const statusLabel: Record<StatusContrato, string> = {
 function mensagemErro(error: unknown) { return getApiError(error, 'Ocorreu um erro ao processar o contrato.'); }
 
 export function Contratos() {
+    const [parametros, setParametros] = useSearchParams();
+    const novoPeloDashboard = parametros.get('novo') === '1';
     const [contratos, setContratos] = useState<Contrato[]>([]);
     const [busca, setBusca] = useState('');
     const [status, setStatus] = useState('');
@@ -64,6 +66,15 @@ export function Contratos() {
         setModalAberto(true);
     }
 
+    function fecharFormulario() {
+        setModalAberto(false);
+        if (novoPeloDashboard) {
+            const proximos = new URLSearchParams(parametros);
+            proximos.delete('novo');
+            setParametros(proximos, { replace: true });
+        }
+    }
+
     async function salvar(payload: ContratoPayload) {
         if (salvando) return;
         setSalvando(true);
@@ -71,7 +82,7 @@ export function Contratos() {
         try {
             if (contratoEdicao) await contratoService.atualizar(contratoEdicao.id, payload);
             else await contratoService.criar(payload);
-            setModalAberto(false);
+            fecharFormulario();
             await carregar(busca, status);
         } catch (error) {
             setErroFormulario(mensagemErro(error));
@@ -140,7 +151,7 @@ export function Contratos() {
                         </div>}
             </section>
 
-            {modalAberto && <ContratoForm contrato={contratoEdicao} salvando={salvando} erro={erroFormulario} onClose={() => !salvando && setModalAberto(false)} onSave={salvar} />}
+            {(modalAberto || novoPeloDashboard) && <ContratoForm contrato={contratoEdicao} salvando={salvando} erro={erroFormulario} onClose={() => !salvando && fecharFormulario()} onSave={salvar} />}
         </div>
     );
 }
