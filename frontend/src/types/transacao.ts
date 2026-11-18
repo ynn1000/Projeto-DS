@@ -1,5 +1,5 @@
 export type TipoTransacao = 'RECEITA' | 'DESPESA';
-export type CategoriaTransacao = 'VENDA' | 'EMPRESTIMO' | 'ALIMENTOS' | 'OUTROS';
+export type CategoriaTransacao = 'VENDA' | 'EMPRESTIMO' | 'ALIMENTOS' | 'EQUIPAMENTO' | 'EVENTOS' | 'OUTROS';
 export type ComprovanteTipo = 'RECIBO' | 'NOTA_FISCAL' | 'COMPROVANTE_PAGAMENTO' | 'OUTRO';
 
 export interface Transacao {

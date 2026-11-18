@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getApiError } from '../../services/api';
 import { transacaoService } from '../../services/transacaoService';
 import type {
@@ -11,7 +11,7 @@ import './transacoes.css';
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const dataBR = (data: string | null) => data ? new Date(`${data}T00:00:00`).toLocaleDateString('pt-BR') : '—';
 const tipoLabel: Record<TipoTransacao, string> = { RECEITA: 'Receita', DESPESA: 'Despesa' };
-const categoriaLabel: Record<string, string> = { VENDA: 'Venda', EMPRESTIMO: 'Empréstimo', ALIMENTOS: 'Alimentos', OUTROS: 'Outros' };
+const categoriaLabel: Record<string, string> = { VENDA: 'Venda', EMPRESTIMO: 'Empréstimo', ALIMENTOS: 'Alimentos', EQUIPAMENTO: 'Equipamento', EVENTOS: 'Eventos', OUTROS: 'Outros' };
 const tipoComprovanteLabel: Record<ComprovanteTipo, string> = {
     RECIBO: 'Recibo', NOTA_FISCAL: 'Nota fiscal', COMPROVANTE_PAGAMENTO: 'Comprovante de pagamento', OUTRO: 'Outro',
 };
@@ -26,6 +26,8 @@ const fimDoMes = (mes: string) => {
 
 export function Transacoes() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const feedback = location.state as { feedback?: string } | null;
     const [transacoes, setTransacoes] = useState<Transacao[]>([]);
     const [categorias, setCategorias] = useState<CategoriaOrcamentaria[]>([]);
     const [projetos, setProjetos] = useState<ProjetoOpcao[]>([]);
@@ -35,6 +37,7 @@ export function Transacoes() {
     const [projetoFiltro, setProjetoFiltro] = useState('');
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState('');
+    const [erroOpcoes, setErroOpcoes] = useState('');
     const [abertaId, setAbertaId] = useState<number | null>(null);
     const [comprovantes, setComprovantes] = useState<Comprovante[]>([]);
     const [comprovantesPrestacao, setComprovantesPrestacao] = useState<Comprovante[]>([]);
@@ -53,25 +56,49 @@ export function Transacoes() {
         const dataInicio = inicioDoMes(mesFiltro);
         const dataFim = fimDoMes(mesFiltro);
         try {
-            const [lista, listaCategorias, listaProjetos, dadosResumo] = await Promise.all([
+            const [lista, dadosResumo] = await Promise.all([
                 transacaoService.listar({
                     ...(tipoFiltro === 'TODOS' ? {} : { tipo: tipoFiltro }),
                     ...(projetoFiltro ? { projetoId: Number(projetoFiltro) } : {}),
                     ...(dataInicio ? { dataInicio } : {}), ...(dataFim ? { dataFim } : {}),
                 }),
-                transacaoService.listarCategoriasOrcamentarias(),
-                transacaoService.listarProjetosAtivos(),
                 dataInicio && dataFim ? transacaoService.resumir(dataInicio, dataFim) : Promise.resolve(null),
             ]);
-            setTransacoes(lista); setCategorias(listaCategorias); setProjetos(listaProjetos); setResumo(dadosResumo);
-        } catch (error) { setErro(getApiError(error, 'Não foi possível carregar as transações.')); }
-        finally { setCarregando(false); }
+            setTransacoes(lista);
+            setResumo(dadosResumo);
+        } catch (error) {
+            setErro(getApiError(error, 'Não foi possível carregar as transações.'));
+        } finally {
+            setCarregando(false);
+        }
     }, [mesFiltro, tipoFiltro, projetoFiltro]);
 
-    useEffect(() => { void carregar(); }, [carregar]);
+    // Agenda a consulta após o efeito para evitar atualização síncrona de estado nele.
+    useEffect(() => {
+        let ativo = true;
+        void Promise.resolve().then(() => { if (ativo) void carregar(); });
+        return () => { ativo = false; };
+    }, [carregar]);
+
+    useEffect(() => {
+        let ativo = true;
+        Promise.allSettled([
+            transacaoService.listarCategoriasOrcamentarias(),
+            transacaoService.listarProjetosAtivos(),
+        ]).then(([categoriasResult, projetosResult]) => {
+            if (!ativo) return;
+            const mensagens: string[] = [];
+            if (categoriasResult.status === 'fulfilled') setCategorias(categoriasResult.value);
+            else mensagens.push(`Categorias: ${getApiError(categoriasResult.reason, 'não foi possível carregar.')}`);
+            if (projetosResult.status === 'fulfilled') setProjetos(projetosResult.value);
+            else mensagens.push(`Projetos: ${getApiError(projetosResult.reason, 'não foi possível carregar.')}`);
+            setErroOpcoes(mensagens.join(' '));
+        });
+        return () => { ativo = false; };
+    }, []);
 
     const nomeCategoria = (id: number | null) => id == null ? '—' : categorias.find((categoria) => categoria.id === id)?.nome ?? `Categoria #${id}`;
-    const saldoPeriodo = resumo ? Number(resumo.resultado) : 0;
+    const saldoPeriodo = resumo ? Number(resumo.resultado) : null;
 
     async function alternarComprovantes(transacaoId: number) {
         if (abertaId === transacaoId) { setAbertaId(null); return; }
@@ -119,10 +146,11 @@ export function Transacoes() {
                 <button className="transactions-new-button" type="button" onClick={() => navigate('/app/transacoes/nova')}>+ Nova transação</button>
             </header>
             <main className="transactions-content">
-                <section className="transactions-summary" aria-label="Resumo financeiro do período">
-                    <article className="transaction-summary-card"><span>Receitas</span><strong className="summary-income">{moeda.format(Number(resumo?.receitas ?? 0))}</strong></article>
-                    <article className="transaction-summary-card"><span>Despesas</span><strong className="summary-expense">{moeda.format(Number(resumo?.despesas ?? 0))}</strong></article>
-                    <article className="transaction-summary-card"><span>Saldo do período</span><strong className={saldoPeriodo >= 0 ? 'summary-positive' : 'summary-negative'}>{moeda.format(saldoPeriodo)}</strong></article>
+                {feedback?.feedback && <div className="transactions-feedback transactions-success" role="status">{feedback.feedback}</div>}
+                <section className="transactions-summary" aria-label="Resumo financeiro do período" aria-live="polite">
+                    <article className="transaction-summary-card"><span>Receitas</span><strong className="summary-income">{resumo ? moeda.format(Number(resumo.receitas)) : carregando ? 'Carregando...' : '—'}</strong></article>
+                    <article className="transaction-summary-card"><span>Despesas</span><strong className="summary-expense">{resumo ? moeda.format(Number(resumo.despesas)) : carregando ? 'Carregando...' : '—'}</strong></article>
+                    <article className="transaction-summary-card"><span>Saldo do período</span><strong className={saldoPeriodo === null ? '' : saldoPeriodo >= 0 ? 'summary-positive' : 'summary-negative'}>{saldoPeriodo === null ? (carregando ? 'Carregando...' : '—') : moeda.format(saldoPeriodo)}</strong></article>
                 </section>
                 <section className="transactions-history" aria-label="Histórico de transações">
                     <div className="transactions-history-heading">
@@ -133,6 +161,7 @@ export function Transacoes() {
                             <label><span>Período</span><input type="month" value={mesFiltro} onChange={(event) => setMesFiltro(event.target.value)} /></label>
                         </div>
                     </div>
+                    {erroOpcoes && <div className="transactions-feedback transactions-error" role="alert">{erroOpcoes}</div>}
                     {erro && <div className="transactions-feedback transactions-error" role="alert">{erro}</div>}
                     {carregando ? <div className="transactions-feedback" aria-live="polite">Carregando transações...</div>
                         : erro ? <div className="transactions-empty">Não foi possível apresentar o histórico.</div>
