@@ -4,6 +4,7 @@ import { Dashboard } from './pages/dashboard';
 import { Equipe } from './pages/equipe'
 import { AppLayout } from './layouts/AppLayout/AppLayout';
 import { ContratoDetalhes, Contratos } from './pages/contratos';
+import { NovaTransacao, Transacoes } from './pages/transacoes';
 
 function EmDesenvolvimento({ titulo }: { titulo: string }) {
     return (
@@ -23,7 +24,13 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <Navigate to="/app/geral" replace /> },
             { path: 'geral', element: <Dashboard /> },
-            { path: 'transacoes', element: <EmDesenvolvimento titulo="Transações" /> },
+            {
+                path: 'transacoes',
+                children: [
+                    { index: true, element: <Transacoes /> },
+                    { path: 'nova', element: <NovaTransacao /> },
+                ],
+            },
             { path: 'documentos', element: <EmDesenvolvimento titulo="Documentos" /> },
             { path: 'contratos', element: <Contratos /> },
             { path: 'contratos/:id', element: <ContratoDetalhes /> },

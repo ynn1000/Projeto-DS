@@ -4,7 +4,7 @@ import { getApiError } from '../../services/api';
 import { transacaoService } from '../../services/transacaoService';
 import type {
     CategoriaOrcamentaria, CategoriaTransacao, PeriodoOrcamento, PrestacaoOpcao,
-    ProjetoOpcao, Subverba, TipoTransacao, TransacaoCreate,
+    ComprovanteTipo, ProjetoOpcao, Subverba, TipoTransacao, TransacaoCreate,
 } from '../../types/transacao';
 import './transacoes.css';
 
@@ -20,7 +20,7 @@ const aplicarMascaraMoeda = (valor: string) => {
 };
 const converterMoeda = (valor: string) => Number(valor.replace(/\./g, '').replace(',', '.'));
 const categoriaLabel: Record<CategoriaTransacao, string> = {
-    VENDA: 'Venda', EMPRESTIMO: 'Empréstimo', ALIMENTOS: 'Alimentos', OUTROS: 'Outros',
+    VENDA: 'Venda', EMPRESTIMO: 'Empréstimo', ALIMENTOS: 'Alimentos', EQUIPAMENTO: 'Equipamento', EVENTOS: 'Eventos', OUTROS: 'Outros',
 };
 
 export function NovaTransacao() {
@@ -37,6 +37,8 @@ export function NovaTransacao() {
     const [subverbaId, setSubverbaId] = useState('');
     const [projetoId, setProjetoId] = useState('');
     const [prestacaoId, setPrestacaoId] = useState(prestacaoInicial);
+    const [arquivoRef, setArquivoRef] = useState('');
+    const [tipoComprovante, setTipoComprovante] = useState<ComprovanteTipo>('COMPROVANTE_PAGAMENTO');
     const [categorias, setCategorias] = useState<CategoriaOrcamentaria[]>([]);
     const [periodos, setPeriodos] = useState<PeriodoOrcamento[]>([]);
     const [subverbas, setSubverbas] = useState<Subverba[]>([]);
@@ -136,7 +138,29 @@ export function NovaTransacao() {
         };
         setSalvando(true);
         transacaoService.criar(payload)
-            .then(() => navigate('/app/transacoes', { replace: true }))
+            .then(async (criada) => {
+                if (arquivoRef.trim()) {
+                    try {
+                        await transacaoService.adicionarComprovante(criada.id, {
+                            tipo: tipoComprovante,
+                            arquivoRef: arquivoRef.trim(),
+                            numeroNotaFiscal: null,
+                            valor: null,
+                            dataDocumento: null,
+                        });
+                    } catch (error: unknown) {
+                        navigate('/app/transacoes', {
+                            replace: true,
+                            state: { feedback: `A transação foi registrada, mas não foi possível cadastrar o comprovante: ${getApiError(error)}` },
+                        });
+                        return;
+                    }
+                }
+                navigate('/app/transacoes', {
+                    replace: true,
+                    state: { feedback: arquivoRef.trim() ? 'Transação e referência do comprovante registradas.' : 'Transação registrada com sucesso.' },
+                });
+            })
             .catch((error: unknown) => setErro(getApiError(error, 'Não foi possível registrar a transação.')))
             .finally(() => setSalvando(false));
     }
@@ -204,6 +228,21 @@ export function NovaTransacao() {
                                 </label>}
                             </>}
                         </>}
+                        <section className="transaction-optional-attachment" aria-label="Comprovante opcional">
+                            <h3>Comprovante <span className="optional-label">Opcional</span></h3>
+                            <label className="transaction-field">Tipo de documento
+                                <select value={tipoComprovante} onChange={(event) => setTipoComprovante(event.target.value as ComprovanteTipo)}>
+                                    <option value="COMPROVANTE_PAGAMENTO">Comprovante de pagamento</option>
+                                    <option value="RECIBO">Recibo</option>
+                                    <option value="NOTA_FISCAL">Nota fiscal</option>
+                                    <option value="OUTRO">Outro</option>
+                                </select>
+                            </label>
+                            <label className="transaction-field">Referência do arquivo
+                                <input type="text" maxLength={4000} value={arquivoRef} onChange={(event) => setArquivoRef(event.target.value)} placeholder="URL ou caminho do arquivo (opcional)" />
+                            </label>
+                            <small className="transaction-field-hint">A API armazena apenas a referência informada; não realiza upload de arquivos.</small>
+                        </section>
                         {erroOpcoes && <p className="transactions-feedback transactions-error" role="alert">{erroOpcoes}</p>}
                         {validacao && <p className="transactions-feedback transactions-error" role="alert">{validacao}</p>}
                         {erro && <p className="transactions-feedback transactions-error" role="alert">{erro}</p>}

@@ -48,7 +48,11 @@ export function Equipe() {
         }
     }, []);
 
-    useEffect(() => { void carregar(); }, [carregar]);
+    useEffect(() => {
+        let ativo = true;
+        void Promise.resolve().then(() => { if (ativo) void carregar(); });
+        return () => { ativo = false; };
+    }, [carregar]);
 
     function selecionarFiltro(role: '' | RoleUsuario) {
         setFiltro(role);

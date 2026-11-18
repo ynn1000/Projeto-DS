@@ -52,8 +52,11 @@ export function Contratos() {
         }
     }, []);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    useEffect(() => { void carregar('', ''); }, [carregar]);
+    useEffect(() => {
+        let ativo = true;
+        void Promise.resolve().then(() => { if (ativo) void carregar('', ''); });
+        return () => { ativo = false; };
+    }, [carregar]);
 
     function abrirNovo() {
         setContratoEdicao(null);
@@ -253,7 +256,6 @@ export function ContratoDetalhes() {
         await carregarPrestacoes();
     }, [contratoId, carregarPrestacoes]);
     // A consulta por ID sincroniza o estado da tela com os recursos remotos.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { void carregar(); }, [carregar]);
 
     const resumo = useMemo(() => {

@@ -79,3 +79,30 @@
 .transaction-attachment-form .transactions-new-button { min-width: 0; min-height: 40px; }
 .transaction-attachment-note { margin-bottom: 0; font-size: 11px !important; }
 @media (max-width: 700px) { .transaction-attachment-form { grid-template-columns: 1fr; } .transaction-attachments li { align-items: flex-start; flex-direction: column; } .transaction-attachments li code { max-width: 100%; } }
+
+.transactions-success { border: 1px solid #cfe5a5; background: #f5fbe9; color: #426b0d; text-align: left; }
+.transaction-optional-attachment { display: grid; gap: 14px; padding: 18px; border: 1px solid #e7e7e7; border-radius: 9px; background: #fafafa; }
+.transaction-optional-attachment h3 { margin: 0; color: #333; font-size: 15px; }
+.transaction-optional-attachment .transaction-field { margin: 0; }
+.transaction-optional-attachment .transaction-field input,
+.transaction-optional-attachment .transaction-field select { min-height: 44px; }
+
+.transactions-table tbody tr:not(:has(.transaction-attachments)):hover { background: #fbfdf5; }
+.transactions-new-button:focus-visible, .transaction-link-button:focus-visible,
+.transaction-form-actions button:focus-visible, .transaction-type-choice label:focus-within,
+.transactions-filters select:focus-visible, .transactions-filters input:focus-visible,
+.transaction-field input:focus-visible, .transaction-field select:focus-visible,
+.transaction-attachment-form input:focus-visible, .transaction-attachment-form select:focus-visible {
+    outline: 3px solid rgb(164 217 0 / 35%);
+    outline-offset: 2px;
+}
+.transaction-cancel-button:hover:not(:disabled) { border-color: #aaa; background: #f8f8f8; }
+.transaction-form-actions button:disabled, .transaction-link-button:disabled { cursor: not-allowed; opacity: .6; }
+.transactions-table { min-width: 720px; }
+@media (max-width: 700px) {
+    .transactions-content { padding: 20px 14px 32px; }
+    .transactions-history { padding: 18px 14px; }
+    .transactions-summary { gap: 12px; margin-bottom: 20px; }
+    .transaction-summary-card { min-height: 94px; padding: 18px; }
+    .transactions-header { padding: 24px 18px 54px; }
+}
