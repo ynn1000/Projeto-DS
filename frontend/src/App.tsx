@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { Login } from './pages/login';
+import { Dashboard } from './pages/dashboard';
 import { AppLayout } from './layouts/AppLayout/AppLayout';
 import { ContratoDetalhes, Contratos } from './pages/contratos';
 
@@ -19,8 +20,8 @@ const router = createBrowserRouter([
         path: '/app',
         element: <AppLayout />,
         children: [
-            { index: true, element: <Navigate to="/app/contratos" replace /> },
-            { path: 'geral', element: <EmDesenvolvimento titulo="Visão geral" /> },
+            { index: true, element: <Navigate to="/app/geral" replace /> },
+            { path: 'geral', element: <Dashboard /> },
             { path: 'transacoes', element: <EmDesenvolvimento titulo="Transações" /> },
             { path: 'documentos', element: <EmDesenvolvimento titulo="Documentos" /> },
             { path: 'contratos', element: <Contratos /> },
