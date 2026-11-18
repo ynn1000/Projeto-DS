@@ -25,3 +25,22 @@ export interface FiltrosContrato {
     clienteNome?: string;
     status?: StatusContrato;
 }
+
+export type StatusPrestacao = 'PENDENTE' | 'PAGA' | 'CANCELADA';
+
+export interface PrestacaoContrato {
+    id: number;
+    contratoId: number;
+    numero: number;
+    valor: number;
+    dataVencimento: string;
+    status: StatusPrestacao;
+    transacaoId: number | null;
+    quantidadeComprovantes: number;
+}
+
+export interface PrestacaoPayload {
+    numero: number;
+    valor: number;
+    dataVencimento: string;
+}

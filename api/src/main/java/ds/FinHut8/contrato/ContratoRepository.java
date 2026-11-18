@@ -4,6 +4,7 @@ import ds.FinHut8.contrato.enums.StatusContrato;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -175,6 +176,91 @@ public class ContratoRepository {
                 """)
                 .param("id", id)
                 .update();
+    }
+
+    public List<PrestacaoContratoDTO> listarPrestacoes(Integer contratoId) {
+        return jdbc.sql("""
+                SELECT p.id, p.contrato_id, p.numero, p.valor, p.data_vencimento, p.status,
+                       (SELECT t.id FROM public.transacao t WHERE t.prestacao_id = p.id ORDER BY t.id DESC LIMIT 1) AS transacao_id,
+                       (SELECT COUNT(*) FROM public.comprovante cp WHERE cp.prestacao_id = p.id) AS quantidade_comprovantes
+                FROM public.prestacao p
+                WHERE p.contrato_id = :contratoId
+                ORDER BY p.numero, p.id
+                """)
+                .param("contratoId", contratoId)
+                .query((rs, row) -> new PrestacaoContratoDTO(
+                        rs.getInt("id"), rs.getInt("contrato_id"), rs.getInt("numero"),
+                        rs.getBigDecimal("valor"), rs.getObject("data_vencimento", LocalDate.class),
+                        rs.getString("status"), rs.getObject("transacao_id", Integer.class),
+                        rs.getLong("quantidade_comprovantes")))
+                .list();
+    }
+
+    public boolean prestacoesDentroDoPeriodo(Integer contratoId, LocalDate dataInicio, LocalDate dataFim) {
+        return jdbc.sql("""
+                SELECT NOT EXISTS (
+                    SELECT 1 FROM public.prestacao
+                    WHERE contrato_id = :contratoId
+                      AND status <> 'CANCELADA'
+                      AND (data_vencimento < :dataInicio OR data_vencimento > :dataFim)
+                )
+                """)
+                .param("contratoId", contratoId)
+                .param("dataInicio", dataInicio)
+                .param("dataFim", dataFim)
+                .query(Boolean.class).single();
+    }
+
+    public boolean prestacaoPossuiVinculos(Integer prestacaoId) {
+        return jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM public.transacao WHERE prestacao_id = :prestacaoId
+                    UNION ALL
+                    SELECT 1 FROM public.comprovante WHERE prestacao_id = :prestacaoId
+                )
+                """)
+                .param("prestacaoId", prestacaoId)
+                .query(Boolean.class).single();
+    }
+
+    public int atualizarPrestacao(Integer contratoId, Integer prestacaoId, Integer numero,
+                                  BigDecimal valor, LocalDate vencimento) {
+        return jdbc.sql("""
+                UPDATE public.prestacao
+                SET numero = :numero, valor = :valor, data_vencimento = :vencimento
+                WHERE id = :prestacaoId AND contrato_id = :contratoId AND status = 'PENDENTE'
+                """)
+                .param("numero", numero).param("valor", valor).param("vencimento", vencimento)
+                .param("prestacaoId", prestacaoId).param("contratoId", contratoId).update();
+    }
+
+    public BigDecimal somarPrestacoesAtivas(Integer contratoId) {
+        return jdbc.sql("""
+                SELECT COALESCE(SUM(valor), 0) FROM public.prestacao
+                WHERE contrato_id = :contratoId AND status <> 'CANCELADA'
+                """)
+                .param("contratoId", contratoId)
+                .query(BigDecimal.class).single();
+    }
+
+    public PrestacaoContratoDTO inserirPrestacao(Integer contratoId, Integer numero, BigDecimal valor, LocalDate vencimento) {
+        return jdbc.sql("""
+                INSERT INTO public.prestacao (contrato_id, numero, valor, data_vencimento, status)
+                VALUES (:contratoId, :numero, :valor, :vencimento, 'PENDENTE')
+                RETURNING id, contrato_id, numero, valor, data_vencimento, status
+                """)
+                .param("contratoId", contratoId).param("numero", numero).param("valor", valor).param("vencimento", vencimento)
+                .query((rs, row) -> new PrestacaoContratoDTO(rs.getInt("id"), rs.getInt("contrato_id"),
+                        rs.getInt("numero"), rs.getBigDecimal("valor"), rs.getObject("data_vencimento", LocalDate.class),
+                        rs.getString("status"), null, 0L)).single();
+    }
+
+    public int cancelarPrestacao(Integer contratoId, Integer prestacaoId) {
+        return jdbc.sql("""
+                UPDATE public.prestacao SET status = 'CANCELADA'
+                WHERE id = :prestacaoId AND contrato_id = :contratoId AND status = 'PENDENTE'
+                """)
+                .param("prestacaoId", prestacaoId).param("contratoId", contratoId).update();
     }
 
     private Contrato mapContrato(ResultSet rs, int rowNum) throws SQLException {

@@ -85,16 +85,83 @@ class ContratoServiceTest {
     }
 
     @Test
-    void bloqueiaAtualizacaoQuandoExistemPrestacoes() {
+    void permiteEditarDadosDoContratoSemAlterarVinculosDasPrestacoes() {
         when(repository.buscarPorIdParaAtualizacao(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
         when(repository.projetoExiste(3)).thenReturn(true);
         when(repository.possuiPrestacoes(10)).thenReturn(true);
+        when(repository.somarPrestacoesAtivas(10)).thenReturn(new BigDecimal("3000.00"));
+        when(repository.prestacoesDentroDoPeriodo(10, INICIO, FIM)).thenReturn(true);
+        when(repository.atualizar(any(Contrato.class))).thenReturn(1);
+        when(repository.buscarPorId(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
+
+        var resposta = service.atualizar(10,
+                new ContratoUpdateDTO(3, "Cliente atualizado", null, new BigDecimal("7000.00"), INICIO, FIM));
+
+        assertEquals(10, resposta.id());
+        verify(repository).atualizar(argThat(c -> c.clienteNome().equals("Cliente atualizado")
+                && c.valorTotal().compareTo(new BigDecimal("7000.00")) == 0));
+    }
+
+    @Test
+    void bloqueiaTrocaDeProjetoQuandoExistemPrestacoes() {
+        when(repository.buscarPorIdParaAtualizacao(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
+        when(repository.projetoExiste(4)).thenReturn(true);
+        when(repository.possuiPrestacoes(10)).thenReturn(true);
 
         var erro = assertThrows(ResponseStatusException.class, () -> service.atualizar(10,
-                new ContratoUpdateDTO(3, "Cliente", null, VALOR, INICIO, FIM)));
+                new ContratoUpdateDTO(4, "Cliente", null, VALOR, INICIO, FIM)));
 
         assertEquals(HttpStatus.CONFLICT, erro.getStatusCode());
         verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void bloqueiaReducaoDoValorAbaixoDasPrestacoesAtivas() {
+        when(repository.buscarPorIdParaAtualizacao(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
+        when(repository.projetoExiste(3)).thenReturn(true);
+        when(repository.possuiPrestacoes(10)).thenReturn(true);
+        when(repository.somarPrestacoesAtivas(10)).thenReturn(new BigDecimal("5000.00"));
+
+        var erro = assertThrows(ResponseStatusException.class, () -> service.atualizar(10,
+                new ContratoUpdateDTO(3, "Cliente", null, new BigDecimal("4000.00"), INICIO, FIM)));
+
+        assertEquals(HttpStatus.CONFLICT, erro.getStatusCode());
+        verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void atualizaPrestacaoPendenteSemVinculos() {
+        var antiga = new PrestacaoContratoDTO(31, 10, 1, new BigDecimal("1000.00"), INICIO,
+                "PENDENTE", null, 0L);
+        var atualizada = new PrestacaoContratoDTO(31, 10, 2, new BigDecimal("1200.00"),
+                LocalDate.of(2026, 9, 1), "PENDENTE", null, 0L);
+        when(repository.buscarPorIdParaAtualizacao(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
+        when(repository.listarPrestacoes(10)).thenReturn(List.of(antiga), List.of(atualizada));
+        when(repository.prestacaoPossuiVinculos(31)).thenReturn(false);
+        when(repository.somarPrestacoesAtivas(10)).thenReturn(new BigDecimal("1000.00"));
+        when(repository.atualizarPrestacao(eq(10), eq(31), eq(2), eq(new BigDecimal("1200.00")), eq(LocalDate.of(2026, 9, 1))))
+                .thenReturn(1);
+
+        var resposta = service.atualizarPrestacao(10, 31,
+                new ds.FinHut8.contrato.dtos.PrestacaoCreateDTO(2, new BigDecimal("1200.00"), LocalDate.of(2026, 9, 1)));
+
+        assertEquals(2, resposta.numero());
+        assertEquals(new BigDecimal("1200.00"), resposta.valor());
+    }
+
+    @Test
+    void bloqueiaEdicaoDePrestacaoComTransacaoOuComprovante() {
+        var prestacao = new PrestacaoContratoDTO(31, 10, 1, new BigDecimal("1000.00"), INICIO,
+                "PENDENTE", null, 0L);
+        when(repository.buscarPorIdParaAtualizacao(10)).thenReturn(Optional.of(contrato(10, StatusContrato.ATIVO)));
+        when(repository.listarPrestacoes(10)).thenReturn(List.of(prestacao));
+        when(repository.prestacaoPossuiVinculos(31)).thenReturn(true);
+
+        var erro = assertThrows(ResponseStatusException.class, () -> service.atualizarPrestacao(10, 31,
+                new ds.FinHut8.contrato.dtos.PrestacaoCreateDTO(1, new BigDecimal("1200.00"), INICIO)));
+
+        assertEquals(HttpStatus.CONFLICT, erro.getStatusCode());
+        verify(repository, never()).atualizarPrestacao(anyInt(), anyInt(), anyInt(), any(), any());
     }
 
     @Test

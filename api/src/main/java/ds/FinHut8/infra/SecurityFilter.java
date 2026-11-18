@@ -42,16 +42,21 @@ public class SecurityFilter extends OncePerRequestFilter {
         var token = recoverToken(request);
 
         if (token != null) {
-            var email = tokenService.validateToken(token);
+            final String email;
+            try {
+                email = tokenService.validateToken(token);
+            } catch (RuntimeException erroToken) {
+                SecurityContextHolder.clearContext();
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token inválido ou expirado.");
+                return;
+            }
 
             User user = userService.getUserEntityByEmail(email);
-
             var authentication = new UsernamePasswordAuthenticationToken(
                     user,
                     null,
                     user.getAuthorities()
             );
-
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 

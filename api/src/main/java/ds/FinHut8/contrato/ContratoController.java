@@ -4,6 +4,7 @@ import ds.FinHut8.contrato.dtos.ContratoCreateDTO;
 import ds.FinHut8.contrato.dtos.ContratoResponseDTO;
 import ds.FinHut8.contrato.dtos.ContratoStatusUpdateDTO;
 import ds.FinHut8.contrato.dtos.ContratoUpdateDTO;
+import ds.FinHut8.contrato.dtos.PrestacaoCreateDTO;
 import ds.FinHut8.contrato.enums.StatusContrato;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -37,6 +38,28 @@ public class ContratoController {
     @GetMapping("/{id}")
     public ContratoResponseDTO buscarPorId(@PathVariable Integer id) {
         return service.buscarPorId(id);
+    }
+
+    @GetMapping("/{id}/prestacoes")
+    public List<PrestacaoContratoDTO> listarPrestacoes(@PathVariable Integer id) {
+        return service.listarPrestacoes(id);
+    }
+
+    @PostMapping("/{id}/prestacoes")
+    public ResponseEntity<PrestacaoContratoDTO> criarPrestacao(@PathVariable Integer id, @RequestBody PrestacaoCreateDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criarPrestacao(id, dto));
+    }
+
+    @PutMapping("/{id}/prestacoes/{prestacaoId}")
+    public PrestacaoContratoDTO atualizarPrestacao(@PathVariable Integer id, @PathVariable Integer prestacaoId,
+                                                    @RequestBody PrestacaoCreateDTO dto) {
+        return service.atualizarPrestacao(id, prestacaoId, dto);
+    }
+
+    @PatchMapping("/{id}/prestacoes/{prestacaoId}/cancelamento")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelarPrestacao(@PathVariable Integer id, @PathVariable Integer prestacaoId) {
+        service.cancelarPrestacao(id, prestacaoId);
     }
 
     @PostMapping

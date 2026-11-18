@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { contratoService } from '../../services/contratoService';
 import { getApiError } from '../../services/api';
-import type { Contrato, ContratoPayload, StatusContrato } from '../../types/contrato';
+import type { Contrato, ContratoPayload, PrestacaoContrato, PrestacaoPayload, StatusContrato } from '../../types/contrato';
+import { transacaoService } from '../../services/transacaoService';
+import type { Comprovante, ComprovanteCreate, ComprovanteTipo } from '../../types/transacao';
 import './contratos.css';
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -110,7 +112,6 @@ export function Contratos() {
                     <p className="contracts-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos</p>
                 </div>
                 <button className="contracts-new-button" type="button" onClick={abrirNovo}>+ Novo contrato</button>
-                <p className="contracts-disclaimer">GESTÃO FINANCEIRA <span>•</span> DADOS REAIS</p>
             </header>
 
             <section className="contracts-content" aria-label="Consulta de contratos">
@@ -210,27 +211,63 @@ export function ContratoDetalhes() {
     const navigate = useNavigate();
     const contratoId = Number(id);
     const [contrato, setContrato] = useState<Contrato | null>(null);
+    const [prestacoes, setPrestacoes] = useState<PrestacaoContrato[]>([]);
     const [carregando, setCarregando] = useState(true);
+    const [carregandoPrestacoes, setCarregandoPrestacoes] = useState(true);
     const [erro, setErro] = useState('');
+    const [erroPrestacoes, setErroPrestacoes] = useState('');
     const [operando, setOperando] = useState(false);
     const [modalEdicao, setModalEdicao] = useState(false);
     const [erroEdicao, setErroEdicao] = useState('');
+    const [modalPrestacao, setModalPrestacao] = useState(false);
+    const [prestacaoEdicao, setPrestacaoEdicao] = useState<PrestacaoContrato | null>(null);
+    const [erroPrestacao, setErroPrestacao] = useState('');
+    const [prestacaoOperando, setPrestacaoOperando] = useState(false);
+    const [prestacaoExpandida, setPrestacaoExpandida] = useState<number | null>(null);
+    const [comprovantes, setComprovantes] = useState<Record<number, Comprovante[]>>({});
+    const [carregandoComprovantes, setCarregandoComprovantes] = useState<number | null>(null);
+    const [erroComprovantes, setErroComprovantes] = useState<Record<number, string>>({});
+    const [formComprovante, setFormComprovante] = useState<number | null>(null);
+    const [comprovanteTipo, setComprovanteTipo] = useState<ComprovanteTipo>('RECIBO');
+    const [comprovanteArquivo, setComprovanteArquivo] = useState('');
+    const [comprovanteNumero, setComprovanteNumero] = useState('');
+    const [comprovanteValor, setComprovanteValor] = useState('');
+    const [comprovanteData, setComprovanteData] = useState('');
+    const [salvandoComprovante, setSalvandoComprovante] = useState(false);
+
+    const carregarPrestacoes = useCallback(async () => {
+        setCarregandoPrestacoes(true);
+        setErroPrestacoes('');
+        try { setPrestacoes(await contratoService.listarPrestacoes(contratoId)); }
+        catch (error) { setErroPrestacoes(mensagemErro(error)); }
+        finally { setCarregandoPrestacoes(false); }
+    }, [contratoId]);
 
     const carregar = useCallback(async () => {
-        if (!Number.isInteger(contratoId) || contratoId <= 0) { setErro('Identificador de contrato inválido.'); setCarregando(false); return; }
+        if (!Number.isInteger(contratoId) || contratoId <= 0) {
+            setErro('Identificador de contrato inválido.'); setCarregando(false); setCarregandoPrestacoes(false); return;
+        }
         setCarregando(true); setErro('');
         try { setContrato(await contratoService.buscarPorId(contratoId)); }
         catch (error) { setErro(mensagemErro(error)); }
         finally { setCarregando(false); }
-    }, [contratoId]);
-    // A consulta por ID sincroniza o detalhe com o recurso remoto.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+        await carregarPrestacoes();
+    }, [contratoId, carregarPrestacoes]);
+    // A consulta por ID sincroniza o estado da tela com os recursos remotos.
     useEffect(() => { void carregar(); }, [carregar]);
+
+    const resumo = useMemo(() => {
+        const ativas = prestacoes.filter((p) => p.status !== 'CANCELADA');
+        return {
+            parcelado: ativas.reduce((soma, p) => soma + Number(p.valor), 0),
+            recebido: ativas.filter((p) => p.status === 'PAGA').reduce((soma, p) => soma + Number(p.valor), 0),
+            pendente: ativas.filter((p) => p.status === 'PENDENTE').reduce((soma, p) => soma + Number(p.valor), 0),
+        };
+    }, [prestacoes]);
 
     async function alterarStatus(novoStatus: StatusContrato) {
         if (!contrato || operando) return;
-        const rotulo = statusLabel[novoStatus];
-        if (!window.confirm(`Confirma a alteração do status para ${rotulo}?`)) return;
+        if (!window.confirm(`Confirma a alteração do status para ${statusLabel[novoStatus]}?`)) return;
         setOperando(true); setErro('');
         try { setContrato(await contratoService.atualizarStatus(contrato.id, novoStatus)); }
         catch (error) { setErro(mensagemErro(error)); }
@@ -252,11 +289,70 @@ export function ContratoDetalhes() {
         finally { setOperando(false); }
     }
 
+    function abrirPrestacao(prestacao: PrestacaoContrato | null = null) {
+        setPrestacaoEdicao(prestacao); setErroPrestacao(''); setModalPrestacao(true);
+    }
+
+    async function salvarPrestacao(payload: PrestacaoPayload) {
+        if (!contrato || prestacaoOperando) return;
+        setPrestacaoOperando(true); setErroPrestacao('');
+        try {
+            if (prestacaoEdicao) await contratoService.atualizarPrestacao(contrato.id, prestacaoEdicao.id, payload);
+            else await contratoService.criarPrestacao(contrato.id, payload);
+            setModalPrestacao(false); setPrestacaoEdicao(null); await carregarPrestacoes();
+        } catch (error) { setErroPrestacao(mensagemErro(error)); }
+        finally { setPrestacaoOperando(false); }
+    }
+
+    async function cancelarPrestacao(prestacao: PrestacaoContrato) {
+        if (!contrato || prestacaoOperando || !window.confirm(`Cancelar a prestação ${prestacao.numero}?`)) return;
+        setPrestacaoOperando(true); setErroPrestacoes('');
+        try { await contratoService.cancelarPrestacao(contrato.id, prestacao.id); await carregarPrestacoes(); }
+        catch (error) { setErroPrestacoes(mensagemErro(error)); }
+        finally { setPrestacaoOperando(false); }
+    }
+
+    async function alternarComprovantes(prestacaoId: number) {
+        if (prestacaoExpandida === prestacaoId) { setPrestacaoExpandida(null); setFormComprovante(null); return; }
+        setPrestacaoExpandida(prestacaoId); setFormComprovante(null);
+        setCarregandoComprovantes(prestacaoId);
+        try {
+            const lista = await transacaoService.listarComprovantesPrestacao(prestacaoId);
+            setComprovantes((atual) => ({ ...atual, [prestacaoId]: lista }));
+            setErroComprovantes((atual) => ({ ...atual, [prestacaoId]: '' }));
+        } catch (error) {
+            setErroComprovantes((atual) => ({ ...atual, [prestacaoId]: mensagemErro(error) }));
+        } finally { setCarregandoComprovantes(null); }
+    }
+
+    async function salvarComprovante(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (formComprovante === null || salvandoComprovante) return;
+        const valor = comprovanteValor.trim() ? Number(comprovanteValor.replace(/\./g, '').replace(',', '.')) : null;
+        if (valor !== null && (!Number.isFinite(valor) || valor <= 0)) {
+            setErroComprovantes((atual) => ({ ...atual, [formComprovante]: 'Informe um valor válido para o documento.' })); return;
+        }
+        const payload: ComprovanteCreate = {
+            tipo: comprovanteTipo, arquivoRef: comprovanteArquivo.trim(),
+            numeroNotaFiscal: comprovanteNumero.trim() || null, valor, dataDocumento: comprovanteData || null,
+        };
+        setSalvandoComprovante(true);
+        try {
+            await transacaoService.adicionarComprovantePrestacao(formComprovante, payload);
+            const lista = await transacaoService.listarComprovantesPrestacao(formComprovante);
+            setComprovantes((atual) => ({ ...atual, [formComprovante]: lista }));
+            setErroComprovantes((atual) => ({ ...atual, [formComprovante]: '' }));
+            setFormComprovante(null); setComprovanteArquivo(''); setComprovanteNumero(''); setComprovanteValor(''); setComprovanteData('');
+            await carregarPrestacoes();
+        } catch (error) {
+            setErroComprovantes((atual) => ({ ...atual, [formComprovante]: mensagemErro(error) }));
+        } finally { setSalvandoComprovante(false); }
+    }
+
     return <div className="contracts-page">
         <header className="contracts-header">
             <div><h1>Detalhes do contrato</h1><p className="contracts-breadcrumb">Hut8&nbsp; / &nbsp;Financeiro&nbsp; / &nbsp;Contratos&nbsp; / &nbsp;Detalhes</p></div>
             {contrato && podeEditar(contrato) && <button className="contracts-new-button" type="button" onClick={() => setModalEdicao(true)}>Editar contrato</button>}
-            <p className="contracts-disclaimer">GESTÃO FINANCEIRA <span>•</span> DADOS REAIS</p>
         </header>
         <section className="contracts-content contract-details-content">
             <Link className="contract-back-link" to="/app/contratos">← Voltar para contratos</Link>
@@ -277,11 +373,99 @@ export function ContratoDetalhes() {
                     </div>
                 </article>
                 <section className="contract-detail-card installments-card">
-                    <h2>Prestações do contrato</h2>
-                    <div className="contracts-empty">A consulta e o gerenciamento de prestações ainda não possuem endpoints disponíveis nesta API. Os dados não serão simulados.</div>
+                    <div className="installments-heading">
+                        <div><h2>Prestações do contrato</h2><p>Parcelas, vencimentos, recebimentos e comprovantes vinculados.</p></div>
+                        {contrato.status === 'ATIVO' && <button className="contracts-new-button installments-add-button" type="button" onClick={() => abrirPrestacao()}>+ Nova prestação</button>}
+                    </div>
+                    {erroPrestacoes && <div className="contracts-feedback contracts-feedback-error" role="alert">{erroPrestacoes}</div>}
+                    {carregandoPrestacoes ? <p className="contracts-feedback">Carregando prestações...</p> : <>
+                        <div className="installments-summary">
+                            <div><span>Valor contratado</span><strong>{moeda.format(contrato.valorTotal)}</strong></div>
+                            <div><span>Valor parcelado</span><strong>{moeda.format(resumo.parcelado)}</strong></div>
+                            <div><span>Recebido</span><strong>{moeda.format(resumo.recebido)}</strong></div>
+                            <div><span>Pendente</span><strong>{moeda.format(resumo.pendente)}</strong></div>
+                        </div>
+                        {prestacoes.length === 0 ? <div className="contracts-empty">Este contrato ainda não possui prestações cadastradas.</div> : <div className="installments-table-wrap">
+                            <table className="installments-table">
+                                <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Situação</th><th>Comprovantes</th><th>Ações</th></tr></thead>
+                                <tbody>{prestacoes.map((prestacao) => <tr key={prestacao.id}>
+                                    <td>{prestacao.numero}ª prestação</td><td>{dataBR(prestacao.dataVencimento)}</td><td>{moeda.format(Number(prestacao.valor))}</td>
+                                    <td><span className={`installment-status installment-${prestacao.status.toLowerCase()}`}>{prestacao.status === 'PAGA' ? 'Paga' : prestacao.status === 'PENDENTE' ? 'Pendente' : 'Cancelada'}</span></td>
+                                    <td>{prestacao.quantidadeComprovantes}</td>
+                                    <td><div className="installment-actions">
+                                        <button type="button" onClick={() => void alternarComprovantes(prestacao.id)}>Comprovantes</button>
+                                        {prestacao.status === 'PENDENTE' && contrato.status === 'ATIVO' && prestacao.transacaoId === null && prestacao.quantidadeComprovantes === 0 && <button type="button" disabled={prestacaoOperando} onClick={() => abrirPrestacao(prestacao)}>Editar</button>}
+                                        {prestacao.status === 'PENDENTE' && contrato.status === 'ATIVO' && prestacao.transacaoId === null && prestacao.quantidadeComprovantes === 0 && <button type="button" disabled={prestacaoOperando} onClick={() => void cancelarPrestacao(prestacao)}>Cancelar</button>}
+                                        {prestacao.status === 'PENDENTE' && <Link to={`/app/transacoes/nova?prestacaoId=${prestacao.id}`}>Registrar recebimento</Link>}
+                                    </div></td>
+                                </tr>)}</tbody>
+                            </table>
+                        </div>}
+                        {prestacaoExpandida !== null && <section className="installment-documents">
+                            <h3>Comprovantes da prestação {prestacoes.find((p) => p.id === prestacaoExpandida)?.numero ?? ''}</h3>
+                            {carregandoComprovantes === prestacaoExpandida ? <p>Carregando comprovantes...</p> : <>
+                                {erroComprovantes[prestacaoExpandida] && <p className="contracts-feedback contracts-feedback-error">{erroComprovantes[prestacaoExpandida]}</p>}
+                                {(comprovantes[prestacaoExpandida] ?? []).length === 0 ? <p>Nenhum comprovante cadastrado.</p> : <ul>{comprovantes[prestacaoExpandida].map((doc) => <li key={doc.id}>
+                                    <span>{doc.tipo.replaceAll('_', ' ')}{doc.numeroNotaFiscal ? ` • ${doc.numeroNotaFiscal}` : ''}{doc.valor ? ` • ${moeda.format(Number(doc.valor))}` : ''}</span>
+                                    {/^(https?:\/\/)/i.test(doc.arquivoRef) ? <a href={doc.arquivoRef} target="_blank" rel="noreferrer">Abrir documento</a> : <span>{doc.arquivoRef}</span>}
+                                </li>)}</ul>}
+                                {formComprovante === prestacaoExpandida ? <form className="installment-proof-form" onSubmit={salvarComprovante}>
+                                    <h4>Adicionar comprovante</h4>
+                                    <div className="installment-proof-fields">
+                                        <label>Tipo<select value={comprovanteTipo} onChange={(e) => setComprovanteTipo(e.target.value as ComprovanteTipo)}><option value="RECIBO">Recibo</option><option value="NOTA_FISCAL">Nota fiscal</option><option value="COMPROVANTE_PAGAMENTO">Comprovante de pagamento</option><option value="OUTRO">Outro</option></select></label>
+                                        <label>Número do documento<input maxLength={60} value={comprovanteNumero} onChange={(e) => setComprovanteNumero(e.target.value)} /></label>
+                                        <label>Valor (opcional)<input inputMode="decimal" placeholder="0,00" value={comprovanteValor} onChange={(e) => setComprovanteValor(e.target.value)} /></label>
+                                        <label>Data do documento<input type="date" value={comprovanteData} onChange={(e) => setComprovanteData(e.target.value)} /></label>
+                                    </div>
+                                    <label>Referência/URL do arquivo<input required maxLength={4000} value={comprovanteArquivo} onChange={(e) => setComprovanteArquivo(e.target.value)} placeholder="https://... ou caminho do arquivo" /></label>
+                                    <div className="installment-actions"><button type="submit" disabled={salvandoComprovante || !comprovanteArquivo.trim()}>{salvandoComprovante ? 'Salvando...' : 'Salvar comprovante'}</button><button type="button" disabled={salvandoComprovante} onClick={() => setFormComprovante(null)}>Cancelar</button></div>
+                                </form> : <button type="button" className="installment-add-proof" onClick={() => { setFormComprovante(prestacaoExpandida); setErroComprovantes((atual) => ({ ...atual, [prestacaoExpandida]: '' })); }}>+ Adicionar comprovante</button>}
+                            </>}
+                        </section>}
+                    </>}
                 </section>
             </>}
         </section>
         {modalEdicao && contrato && <ContratoForm contrato={contrato} salvando={operando} erro={erroEdicao} onClose={() => !operando && setModalEdicao(false)} onSave={salvarEdicao} />}
+        {modalPrestacao && <PrestacaoForm prestacao={prestacaoEdicao} salvando={prestacaoOperando} erro={erroPrestacao} onClose={() => !prestacaoOperando && setModalPrestacao(false)} onSave={salvarPrestacao} />}
+    </div>;
+}
+
+interface PrestacaoFormProps {
+    prestacao: PrestacaoContrato | null;
+    salvando: boolean;
+    erro: string;
+    onClose: () => void;
+    onSave: (payload: PrestacaoPayload) => void;
+}
+
+function PrestacaoForm({ prestacao, salvando, erro, onClose, onSave }: PrestacaoFormProps) {
+    const [numero, setNumero] = useState(String(prestacao?.numero ?? ''));
+    const [valor, setValor] = useState(prestacao ? Number(prestacao.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+    const [dataVencimento, setDataVencimento] = useState(prestacao?.dataVencimento ?? '');
+    const [validacao, setValidacao] = useState('');
+
+    function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        const numeroInformado = Number(numero);
+        const valorInformado = Number(valor.trim().replace(/\./g, '').replace(',', '.'));
+        if (!Number.isInteger(numeroInformado) || numeroInformado <= 0) return setValidacao('Informe um número de prestação positivo.');
+        if (!Number.isFinite(valorInformado) || valorInformado <= 0 || valorInformado > 9999999.99) return setValidacao('Informe um valor positivo válido.');
+        if (!/^\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?$|^\d+(?:,\d{1,2})?$/.test(valor.trim())) return setValidacao('Informe um valor com até duas casas decimais.');
+        if (!dataVencimento) return setValidacao('Informe a data de vencimento.');
+        setValidacao(''); onSave({ numero: numeroInformado, valor: valorInformado, dataVencimento });
+    }
+
+    return <div className="contract-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+        <section className="contract-modal" role="dialog" aria-modal="true" aria-labelledby="installment-form-title">
+            <header><h2 id="installment-form-title">{prestacao ? 'Editar prestação' : 'Nova prestação'}</h2><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>
+            <form onSubmit={submit}>
+                <label>Número da prestação<input type="number" min="1" step="1" required value={numero} onChange={(e) => setNumero(e.target.value)} /></label>
+                <label>Valor (R$)<input inputMode="decimal" placeholder="0,00" required value={valor} onChange={(e) => setValor(aplicarMascaraMoeda(e.target.value))} /></label>
+                <label>Data de vencimento<input type="date" required value={dataVencimento} onChange={(e) => setDataVencimento(e.target.value)} /></label>
+                {(validacao || erro) && <p className="contracts-feedback contracts-feedback-error" role="alert">{validacao || erro}</p>}
+                <footer><button type="button" className="contract-cancel-button" onClick={onClose} disabled={salvando}>Cancelar</button><button type="submit" className="contracts-new-button" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar prestação'}</button></footer>
+            </form>
+        </section>
     </div>;
 }

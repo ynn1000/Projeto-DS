@@ -48,6 +48,81 @@ public class ContratoService {
                 .orElseThrow(() -> naoEncontrado(id));
     }
 
+    @Transactional(readOnly = true)
+    public List<PrestacaoContratoDTO> listarPrestacoes(Integer contratoId) {
+        validarId(contratoId);
+        if (repository.buscarPorId(contratoId).isEmpty()) throw naoEncontrado(contratoId);
+        return repository.listarPrestacoes(contratoId);
+    }
+
+    @Transactional
+    public PrestacaoContratoDTO criarPrestacao(Integer contratoId, ds.FinHut8.contrato.dtos.PrestacaoCreateDTO dto) {
+        validarId(contratoId);
+        Contrato contrato = repository.buscarPorIdParaAtualizacao(contratoId)
+                .orElseThrow(() -> naoEncontrado(contratoId));
+        if (contrato.status() != StatusContrato.ATIVO) {
+            throw erro(HttpStatus.CONFLICT, "Só é possível adicionar prestações a contratos ativos.");
+        }
+        validarDadosPrestacao(contrato, dto);
+        BigDecimal comprometido = repository.somarPrestacoesAtivas(contratoId);
+        if (comprometido.add(dto.valor()).compareTo(contrato.valorTotal()) > 0) {
+            throw erro(HttpStatus.CONFLICT, "A soma das prestações não pode ultrapassar o valor total do contrato.");
+        }
+        try {
+            return repository.inserirPrestacao(contratoId, dto.numero(), dto.valor(), dto.dataVencimento());
+        } catch (DataIntegrityViolationException e) {
+            throw conflitoIntegridade("Já existe uma prestação com esse número neste contrato ou os dados violam uma restrição do banco.", e);
+        }
+    }
+
+    @Transactional
+    public PrestacaoContratoDTO atualizarPrestacao(Integer contratoId, Integer prestacaoId,
+                                                    ds.FinHut8.contrato.dtos.PrestacaoCreateDTO dto) {
+        validarId(contratoId);
+        validarId(prestacaoId);
+        Contrato contrato = repository.buscarPorIdParaAtualizacao(contratoId)
+                .orElseThrow(() -> naoEncontrado(contratoId));
+        if (contrato.status() != StatusContrato.ATIVO) {
+            throw erro(HttpStatus.CONFLICT, "Só é possível editar prestações de contratos ativos.");
+        }
+        PrestacaoContratoDTO atual = repository.listarPrestacoes(contratoId).stream()
+                .filter(p -> p.id().equals(prestacaoId)).findFirst()
+                .orElseThrow(() -> erro(HttpStatus.NOT_FOUND, "Prestação não encontrada neste contrato."));
+        if (!"PENDENTE".equals(atual.status())) {
+            throw erro(HttpStatus.CONFLICT, "Somente prestações pendentes podem ser editadas.");
+        }
+        if (repository.prestacaoPossuiVinculos(prestacaoId)) {
+            throw erro(HttpStatus.CONFLICT, "Não é possível editar uma prestação vinculada a transação ou comprovante.");
+        }
+        validarDadosPrestacao(contrato, dto);
+        BigDecimal comprometido = repository.somarPrestacoesAtivas(contratoId)
+                .subtract(atual.valor()).add(dto.valor());
+        if (comprometido.compareTo(contrato.valorTotal()) > 0) {
+            throw erro(HttpStatus.CONFLICT, "A soma das prestações não pode ultrapassar o valor total do contrato.");
+        }
+        try {
+            if (repository.atualizarPrestacao(contratoId, prestacaoId, dto.numero(), dto.valor(), dto.dataVencimento()) != 1) {
+                throw erro(HttpStatus.CONFLICT, "A prestação foi alterada ou não está mais pendente.");
+            }
+            return repository.listarPrestacoes(contratoId).stream()
+                    .filter(p -> p.id().equals(prestacaoId)).findFirst().orElseThrow();
+        } catch (DataIntegrityViolationException e) {
+            throw conflitoIntegridade("Já existe uma prestação com esse número neste contrato ou os dados violam uma restrição do banco.", e);
+        }
+    }
+
+    @Transactional
+    public void cancelarPrestacao(Integer contratoId, Integer prestacaoId) {
+        validarId(contratoId); validarId(prestacaoId);
+        if (repository.buscarPorIdParaAtualizacao(contratoId).isEmpty()) throw naoEncontrado(contratoId);
+        if (repository.prestacaoPossuiVinculos(prestacaoId)) {
+            throw erro(HttpStatus.CONFLICT, "Não é possível cancelar uma prestação vinculada a transação ou comprovante.");
+        }
+        if (repository.cancelarPrestacao(contratoId, prestacaoId) != 1) {
+            throw erro(HttpStatus.CONFLICT, "A prestação não existe neste contrato ou não está pendente.");
+        }
+    }
+
     @Transactional
     public ContratoResponseDTO criar(ContratoCreateDTO dto) {
         DadosContrato dados = validarDados(dto == null ? null : dto.projetoId(),
@@ -83,15 +158,19 @@ public class ContratoService {
                 dto == null ? null : dto.dataFim());
         validarProjeto(dados.projetoId());
 
-        /*
-         * As prestações são obrigações financeiras vinculadas ao contrato.
-         * Nesta etapa não existe regra aprovada para recalcular seus valores,
-         * vencimentos ou projeto quando os dados-base do contrato mudam.
-         * Por isso, a atualização integral é bloqueada enquanto houver prestações.
-         */
         if (repository.possuiPrestacoes(id)) {
-            throw erro(HttpStatus.CONFLICT,
-                    "O contrato possui prestações vinculadas. Seus dados não podem ser alterados nesta operação para preservar o histórico financeiro.");
+            if (!atual.projetoId().equals(dados.projetoId())) {
+                throw erro(HttpStatus.CONFLICT,
+                        "Não é possível trocar o projeto de um contrato que possui prestações vinculadas.");
+            }
+            if (repository.somarPrestacoesAtivas(id).compareTo(dados.valorTotal()) > 0) {
+                throw erro(HttpStatus.CONFLICT,
+                        "O valor total do contrato não pode ser menor que a soma das prestações não canceladas.");
+            }
+            if (!repository.prestacoesDentroDoPeriodo(id, dados.dataInicio(), dados.dataFim())) {
+                throw erro(HttpStatus.CONFLICT,
+                        "O período do contrato deve abranger os vencimentos de todas as prestações não canceladas.");
+            }
         }
 
         Contrato atualizado = new Contrato(atual.id(), dados.projetoId(), dados.clienteNome(),
@@ -159,6 +238,17 @@ public class ContratoService {
             }
         } catch (DataIntegrityViolationException e) {
             throw conflitoIntegridade("O contrato possui registros financeiros vinculados e não pode ser excluído.", e);
+        }
+    }
+
+    private void validarDadosPrestacao(Contrato contrato, ds.FinHut8.contrato.dtos.PrestacaoCreateDTO dto) {
+        if (dto == null || dto.numero() == null || dto.numero() <= 0 || dto.valor() == null
+                || dto.valor().signum() <= 0 || dto.valor().compareTo(VALOR_MAXIMO) > 0
+                || dto.valor().stripTrailingZeros().scale() > 2 || dto.dataVencimento() == null) {
+            throw erro(HttpStatus.BAD_REQUEST, "Informe número positivo, valor positivo com até duas casas decimais e data de vencimento.");
+        }
+        if (dto.dataVencimento().isBefore(contrato.dataInicio()) || dto.dataVencimento().isAfter(contrato.dataFim())) {
+            throw erro(HttpStatus.BAD_REQUEST, "A data de vencimento deve estar dentro do período do contrato.");
         }
     }
 

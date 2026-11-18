@@ -5,6 +5,7 @@ import ds.FinHut8.contrato.dtos.ContratoCreateDTO;
 import ds.FinHut8.contrato.dtos.ContratoResponseDTO;
 import ds.FinHut8.contrato.dtos.ContratoStatusUpdateDTO;
 import ds.FinHut8.contrato.dtos.ContratoUpdateDTO;
+import ds.FinHut8.contrato.dtos.PrestacaoCreateDTO;
 import ds.FinHut8.contrato.enums.StatusContrato;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -145,4 +146,55 @@ class ContratoControllerTest {
                         .content("{json-invalido"))
                 .andExpect(status().isBadRequest());
     }
+    @Test
+    void listaPrestacoesDoContratoRetorna200() throws Exception {
+        when(service.listarPrestacoes(15)).thenReturn(List.of(
+                new PrestacaoContratoDTO(31, 15, 1, new BigDecimal("1500.00"),
+                        LocalDate.of(2026, 8, 1), "PENDENTE", null, 0L)));
+
+        mvc.perform(get("/contratos/15/prestacoes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(31))
+                .andExpect(jsonPath("$[0].status").value("PENDENTE"));
+    }
+
+    @Test
+    void criaPrestacaoRetorna201() throws Exception {
+        when(service.criarPrestacao(eq(15), any(PrestacaoCreateDTO.class))).thenReturn(
+                new PrestacaoContratoDTO(31, 15, 1, new BigDecimal("1500.00"),
+                        LocalDate.of(2026, 8, 1), "PENDENTE", null, 0L));
+
+        mvc.perform(post("/contratos/15/prestacoes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numero":1,"valor":1500.00,"dataVencimento":"2026-08-01"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numero").value(1))
+                .andExpect(jsonPath("$.valor").value(1500.00));
+    }
+
+    @Test
+    void atualizaPrestacaoRetorna200() throws Exception {
+        when(service.atualizarPrestacao(eq(15), eq(31), any(PrestacaoCreateDTO.class))).thenReturn(
+                new PrestacaoContratoDTO(31, 15, 2, new BigDecimal("1750.00"),
+                        LocalDate.of(2026, 9, 1), "PENDENTE", null, 0L));
+
+        mvc.perform(put("/contratos/15/prestacoes/31")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"numero":2,"valor":1750.00,"dataVencimento":"2026-09-01"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numero").value(2))
+                .andExpect(jsonPath("$.valor").value(1750.00));
+    }
+
+    @Test
+    void cancelaPrestacaoRetorna204() throws Exception {
+        doNothing().when(service).cancelarPrestacao(15, 31);
+        mvc.perform(patch("/contratos/15/prestacoes/31/cancelamento"))
+                .andExpect(status().isNoContent());
+    }
+
 }
