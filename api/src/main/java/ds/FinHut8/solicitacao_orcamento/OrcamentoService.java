@@ -26,19 +26,21 @@ public class OrcamentoService {
         this.repository = repository;
     }
 
-    // Cria uma solicitação, PENDENTE como valor padrão
+    // ---------- Usuário ----------
+
+    // Cria uma solicitação (nasce como PENDENTE)
     public OrcamentoResponseDTO solicitar(OrcamentoRequestDTO dto, User solicitante) {
         validarSolicitacao(dto);
 
         if (!repository.categoriaAtivaExiste(dto.categoriaId())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Categoria inexistente ou inativa."
+                    "Categoria orçamentária inexistente ou inativa."
             );
         }
 
         Integer id = repository.inserir(
-                funcionarioDe(solicitante),
+                solicitante.getMatricula(),
                 dto.categoriaId(),
                 dto.titulo().trim(),
                 dto.descricao().trim(),
@@ -51,32 +53,32 @@ public class OrcamentoService {
 
     // Lista as solicitações do próprio usuário
     public List<OrcamentoResponseDTO> listarMinhas(User usuario) {
-        return repository.findBySolicitante(funcionarioDe(usuario))
+        return repository.findBySolicitante(usuario.getMatricula())
                 .stream()
                 .map(OrcamentoResponseDTO::new)
                 .toList();
     }
 
-    // USER ou ADMIN consultam uma solicitação, o USER só pode consultar a sua própria
+    // Consulta uma solicitação: dono ou admin
     public OrcamentoResponseDTO consultar(Integer id, User usuario) {
         Orcamento orcamento = buscarOuFalhar(id);
 
         boolean admin = usuario.getRole() == UserRole.ADMIN;
-        boolean dono = repository.findFuncionarioIdByUsuario(usuario.getId())
-                .map(orcamento.solicitanteId()::equals)
-                .orElse(false);
+        boolean dono = orcamento.solicitanteId().equals(usuario.getMatricula());
 
         if (!admin && !dono) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Você não tem acesso a esta solicitação"
+                    "Você não tem acesso a esta solicitação."
             );
         }
 
         return new OrcamentoResponseDTO(orcamento);
     }
 
-    // Lista todas as solicitações
+    // ---------- Admin ----------
+
+    // Lista todas as solicitações (filtro opcional por status)
     public List<OrcamentoResponseDTO> listarTodas(OrcamentoStatus status) {
         return repository.findAll(status)
                 .stream()
@@ -84,10 +86,10 @@ public class OrcamentoService {
                 .toList();
     }
 
-    // Altera o status: PENDENTE -> EM_ANALISE | APROVADO | REJEITADO 
+    // Altera o status: PENDENTE -> EM_ANALISE | APROVADO | REJEITADO ; EM_ANALISE -> APROVADO | REJEITADO
     public OrcamentoResponseDTO alterarStatus(Integer id, OrcamentoDecisaoDTO dto, User admin) {
         if (dto == null || dto.status() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe o novo status:");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe o novo status.");
         }
 
         OrcamentoStatus novo = dto.status();
@@ -96,10 +98,10 @@ public class OrcamentoService {
             justificativa = null;
         }
 
-        if (novo == OrcamentoStatus.REPROVADO && justificativa == null) {
+        if (novo == OrcamentoStatus.REJEITADO && justificativa == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Informe a justificativa para rejeitar a solicitação:"
+                    "Informe a justificativa para rejeitar a solicitação."
             );
         }
 
@@ -112,10 +114,10 @@ public class OrcamentoService {
             );
         }
 
-        // Registra quem avaliou e quando
-        boolean decisaoFinal = novo == OrcamentoStatus.APROVADO || novo == OrcamentoStatus.REPROVADO;
+        // Decisão final registra quem avaliou e quando (exigido por ck_solicitacao_decidida)
+        boolean decisaoFinal = novo == OrcamentoStatus.APROVADO || novo == OrcamentoStatus.REJEITADO;
 
-        Integer avaliadorId = decisaoFinal ? funcionarioDe(admin) : null;
+        String avaliadorId = decisaoFinal ? admin.getMatricula() : null;
 
         int alteradas = repository.atualizarStatus(
                 id,
@@ -136,15 +138,15 @@ public class OrcamentoService {
         return new OrcamentoResponseDTO(buscarOuFalhar(id));
     }
 
-
+    // ---------- Auxiliares ----------
 
     private boolean transicaoPermitida(OrcamentoStatus atual, OrcamentoStatus novo) {
         return switch (atual) {
             case PENDENTE -> novo == OrcamentoStatus.EM_ANALISE
                     || novo == OrcamentoStatus.APROVADO
-                    || novo == OrcamentoStatus.REPROVADO;
+                    || novo == OrcamentoStatus.REJEITADO;
             case EM_ANALISE -> novo == OrcamentoStatus.APROVADO
-                    || novo == OrcamentoStatus.REPROVADO;
+                    || novo == OrcamentoStatus.REJEITADO;
             default -> false; // APROVADO e REJEITADO são finais
         };
     }
@@ -158,7 +160,7 @@ public class OrcamentoService {
 
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Informe categoria, título, descrição e valor solicitado:"
+                    "Informe categoria, título, descrição e valor solicitado."
             );
         }
 
@@ -180,15 +182,6 @@ public class OrcamentoService {
                     "O valor deve ser maior que zero, até 9.999.999,99, com no máximo duas casas decimais."
             );
         }
-    }
-
-    // Funcionário ligado ao usuário logado, sem vínculo não dá para solicitar/avaliar
-    private Integer funcionarioDe(User usuario) {
-        return repository.findFuncionarioIdByUsuario(usuario.getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Usuário não vinculado a um funcionário."
-                ));
     }
 
     private Orcamento buscarOuFalhar(Integer id) {

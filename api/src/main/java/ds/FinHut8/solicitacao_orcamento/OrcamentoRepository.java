@@ -1,9 +1,8 @@
 package ds.FinHut8.solicitacao_orcamento;
 
+import ds.FinHut8.solicitacao_orcamento.enums.OrcamentoStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
-
-import ds.FinHut8.solicitacao_orcamento.enums.OrcamentoStatus;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -12,7 +11,6 @@ import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 public class OrcamentoRepository {
@@ -23,7 +21,7 @@ public class OrcamentoRepository {
             SELECT
                 s.id,
                 s.solicitante_id,
-                f.nome AS solicitante_nome,
+                u.nome AS solicitante_nome,
                 s.categoria_id,
                 c.nome AS categoria_nome,
                 s.titulo,
@@ -36,20 +34,12 @@ public class OrcamentoRepository {
                 s.data_decisao,
                 s.criado_em
             FROM public.solicitacao_orcamento s
-            JOIN public.funcionario f ON f.id = s.solicitante_id
+            JOIN public.usuario u ON u.matricula = s.solicitante_id
             JOIN public.categoria_orcamentaria c ON c.id = s.categoria_id
             """;
 
     public OrcamentoRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
-    }
-
-    // Descobre o funcionário ligado ao usuário logado, NULL se n tiver
-    public Optional<Integer> findFuncionarioIdByUsuario(UUID usuarioId) {
-        return jdbc.sql("SELECT id FROM public.funcionario WHERE usuario_id = :usuario")
-                .param("usuario", usuarioId)
-                .query(Integer.class)
-                .optional();
     }
 
     // Verifica se a categoria existe e está ativa
@@ -65,8 +55,8 @@ public class OrcamentoRepository {
                 .single();
     }
 
-    // Insere a solicitação e devolve o id gerado
-    public Integer inserir(Integer solicitanteId, Integer categoriaId, String titulo,
+    // Insere a solicitação (status PENDENTE é o default do banco) e devolve o id gerado
+    public Integer inserir(String solicitanteId, Integer categoriaId, String titulo,
                            String descricao, BigDecimal valor, String arquivoRef) {
         return jdbc.sql("""
                 INSERT INTO public.solicitacao_orcamento
@@ -92,7 +82,7 @@ public class OrcamentoRepository {
                 .optional();
     }
 
-    public List<Orcamento> findBySolicitante(Integer solicitanteId) {
+    public List<Orcamento> findBySolicitante(String solicitanteId) {
         return jdbc.sql(SELECT_ORCAMENTO + " WHERE s.solicitante_id = :solicitante ORDER BY s.criado_em DESC")
                 .param("solicitante", solicitanteId)
                 .query(this::mapOrcamento)
@@ -116,7 +106,7 @@ public class OrcamentoRepository {
     // Atualiza o status só se ele ainda não tiver sido alterado
     // Retorna o número de linhas alteradas, 0 = o status mudou no meio do caminho
     public int atualizarStatus(Integer id, OrcamentoStatus statusEsperado, OrcamentoStatus novoStatus,
-                               Integer avaliadoPorId, String justificativa, OffsetDateTime dataDecisao) {
+                               String avaliadoPorId, String justificativa, OffsetDateTime dataDecisao) {
         return jdbc.sql("""
                 UPDATE public.solicitacao_orcamento
                 SET status = :novo,
@@ -126,7 +116,7 @@ public class OrcamentoRepository {
                 WHERE id = :id AND status = :esperado
                 """)
                 .param("novo", novoStatus.name())
-                .param("avaliador", avaliadoPorId, Types.INTEGER)
+                .param("avaliador", avaliadoPorId, Types.VARCHAR)
                 .param("justificativa", justificativa, Types.VARCHAR)
                 .param("data", dataDecisao, Types.TIMESTAMP_WITH_TIMEZONE)
                 .param("id", id)
@@ -137,7 +127,7 @@ public class OrcamentoRepository {
     private Orcamento mapOrcamento(ResultSet rs, int rowNum) throws SQLException {
         return new Orcamento(
                 rs.getInt("id"),
-                rs.getInt("solicitante_id"),
+                rs.getString("solicitante_id"),
                 rs.getString("solicitante_nome"),
                 rs.getInt("categoria_id"),
                 rs.getString("categoria_nome"),
@@ -146,7 +136,7 @@ public class OrcamentoRepository {
                 rs.getBigDecimal("valor_solicitado"),
                 rs.getString("arquivo_ref"),
                 OrcamentoStatus.valueOf(rs.getString("status")),
-                rs.getObject("avaliado_por_id", Integer.class),
+                rs.getString("avaliado_por_id"),
                 rs.getString("justificativa_decisao"),
                 rs.getObject("data_decisao", OffsetDateTime.class),
                 rs.getObject("criado_em", OffsetDateTime.class)

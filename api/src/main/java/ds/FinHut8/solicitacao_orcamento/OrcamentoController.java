@@ -38,9 +38,9 @@ public class OrcamentoController {
         return service.listarMinhas(usuario);
     }
 
-    // Admin: consultar todas (filtro opcional: /orcamentos?status=PENDENTE)
+    // Admin: consultar todas
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping
+    @GetMapping("/todas")
     public List<OrcamentoResponseDTO> listarTodas(
             @RequestParam(required = false) OrcamentoStatus status) {
 

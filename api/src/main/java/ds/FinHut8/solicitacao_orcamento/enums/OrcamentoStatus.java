@@ -4,5 +4,5 @@ public enum OrcamentoStatus {
     PENDENTE,
     EM_ANALISE,
     APROVADO, 
-    REPROVADO;
+    REJEITADO;
 }

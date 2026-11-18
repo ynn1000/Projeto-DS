@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 
 public record OrcamentoResponseDTO(
         Integer id,
-        Integer solicitanteId,
+        String solicitanteId,
         String solicitanteNome,
         Integer categoriaId,
         String categoriaNome,
@@ -17,7 +17,7 @@ public record OrcamentoResponseDTO(
         BigDecimal valorSolicitado,
         String arquivoRef,
         OrcamentoStatus status,
-        Integer avaliadoPorId,
+        String avaliadoPorId,
         String justificativaDecisao,
         OffsetDateTime dataDecisao,
         OffsetDateTime criadoEm
