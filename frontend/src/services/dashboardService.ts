@@ -4,6 +4,8 @@ export const categoriasTransacao = {
     VENDA: 'Venda',
     EMPRESTIMO: 'Empréstimo',
     ALIMENTOS: 'Alimentos',
+    EQUIPAMENTO: 'Equipamentos',
+    EVENTOS: 'Eventos',
     OUTROS: 'Outros',
 } as const;
 

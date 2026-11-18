@@ -5,5 +5,7 @@ public enum CategoriaTransacao {
     VENDA,
     EMPRESTIMO,
     ALIMENTOS,
+    EQUIPAMENTO,
+    EVENTOS,
     OUTROS
 }

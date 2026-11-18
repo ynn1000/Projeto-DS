@@ -4,7 +4,14 @@ import {
     categoriasTransacao, dashboardService, type CategoriaTransacao,
     type OpcoesLancamento, type TipoTransacao,
 } from '../../services/dashboardService';
-import { dataLocalISO } from './financeiro';
+import { dataLocalISO, moeda } from './financeiro';
+
+const VALOR_MAXIMO_CENTAVOS = 999_999_999;
+
+function posicionarCursorNoFim(campo: HTMLInputElement) {
+    if (campo.selectionStart !== campo.selectionEnd) return;
+    campo.setSelectionRange(campo.value.length, campo.value.length);
+}
 
 interface Props {
     tipoInicial: TipoTransacao;
@@ -17,6 +24,7 @@ export function LancamentoDialog({ tipoInicial, onClose, onSaved }: Props) {
     const enviando = useRef(false);
     const [tipo, setTipo] = useState<TipoTransacao>(tipoInicial);
     const [data, setData] = useState(dataLocalISO);
+    const [valorCentavos, setValorCentavos] = useState(0);
     const [verba, setVerba] = useState('');
     const [subverba, setSubverba] = useState('');
     const [salvando, setSalvando] = useState(false);
@@ -50,8 +58,7 @@ export function LancamentoDialog({ tipoInicial, onClose, onSaved }: Props) {
         if (enviando.current || (despesa && !verbas.some(opcao => opcao.id === Number(verba)))) return;
         const dados = new FormData(evento.currentTarget);
         const descricao = String(dados.get('descricao') ?? '').trim();
-        const valor = Number(dados.get('valor'));
-        if (!descricao || !Number.isFinite(valor) || valor <= 0) {
+        if (!descricao || valorCentavos <= 0) {
             setErro('Informe a descrição e um valor maior que zero.');
             return;
         }
@@ -60,7 +67,7 @@ export function LancamentoDialog({ tipoInicial, onClose, onSaved }: Props) {
         setErro('');
         try {
             await dashboardService.registrar({
-                descricao, tipo, valor,
+                descricao, tipo, valor: valorCentavos / 100,
                 categoriaTransacao: dados.get('categoriaTransacao') as CategoriaTransacao,
                 dataMovimento: data,
                 categoriaOrcamentariaId: despesa ? Number(verba) : null,
@@ -107,7 +114,14 @@ export function LancamentoDialog({ tipoInicial, onClose, onSaved }: Props) {
                             </select>
                         </label>
                         <label>Valor (R$)
-                            <input type="number" name="valor" min="0.01" max="9999999.99" step="0.01" required />
+                            <input type="text" name="valor" inputMode="numeric" autoComplete="off" required
+                                className="dashboard-valor" value={moeda.format(valorCentavos / 100)}
+                                onFocus={evento => posicionarCursorNoFim(evento.currentTarget)}
+                                onClick={evento => posicionarCursorNoFim(evento.currentTarget)}
+                                onChange={evento => {
+                                    const centavos = Number(evento.currentTarget.value.replace(/\D/g, ''));
+                                    if (centavos <= VALOR_MAXIMO_CENTAVOS) setValorCentavos(centavos);
+                                }} />
                         </label>
                         <label>Data do movimento
                             <input type="date" required value={data} onChange={evento => {

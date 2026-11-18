@@ -179,6 +179,12 @@
     font: inherit;
     font-weight: 450;
 }
+.dashboard-dialog .dashboard-valor {
+    text-align: start;
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+    font-weight: 600;
+}
 .dashboard-dialog footer { justify-content: flex-end; margin-top: 18px; }
 
 @media (max-width: 1180px) {
